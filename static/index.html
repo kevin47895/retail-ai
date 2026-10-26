@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kovaq - Retail Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .sidebar-item:hover { background-color: #e5e7eb; }
+        .sidebar-item.active { background-color: #e0e7ff; color: #4338ca; border-right: 4px solid #4338ca; }
+        #chat-box::-webkit-scrollbar { width: 6px; }
+        #chat-box::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .loader { border: 3px solid #e5e7eb; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .btn { font-size: .875rem; font-weight: 500; padding: .25rem .75rem; border-radius: .25rem; transition: background .15s; cursor: pointer; }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex overflow-hidden">
+    <div id="login-screen" class="fixed inset-0 bg-gray-100 flex items-center justify-center z-50">
+        <div class="bg-white p-10 rounded-2xl shadow-xl w-96 border border-gray-200">
+            <div class="mb-8 text-center"><h2 class="text-4xl font-bold text-indigo-600">Kovaq</h2><p class="text-gray-500 text-sm mt-1">Retail Analytics</p></div>
+            <input type="text" id="user" placeholder="Usuario" class="w-full p-3 mb-4 bg-gray-50 rounded-lg border border-gray-300 outline-none">
+            <input type="password" id="pass" placeholder="Contraseña" class="w-full p-3 mb-6 bg-gray-50 rounded-lg border border-gray-300 outline-none" onkeypress="if(event.key==='Enter') hacerLogin()">
+            <button onclick="hacerLogin()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">Iniciar Sesión</button>
+            <p id="error-msg" class="text-red-500 text-sm mt-4 text-center hidden">Credenciales incorrectas</p>
+        </div>
+    </div>
+
+    <div id="dashboard" class="w-full h-full flex hidden">
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm z-30">
+            <div class="h-16 flex items-center px-6 border-b border-gray-200"><h1 class="text-2xl font-bold text-indigo-600">Kovaq</h1></div>
+            <nav class="flex-1 py-4 flex flex-col gap-1">
+                <a href="#" class="sidebar-item active flex items-center gap-3 px-6 py-3 text-sm font-medium"><i class="fas fa-chart-pie w-5"></i> Dashboard</a>
+            </nav>
+            <div class="p-4 border-t border-gray-200"><button onclick="cerrarSesion()" class="flex items-center gap-3 w-full px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button></div>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-y-auto bg-gray-50">
+            <header class="bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-2 px-8 py-3 sticky top-0 z-20 shadow-sm">
+                <div class="flex items-center gap-3"><h2 class="text-lg font-semibold text-gray-800">Vista General</h2>
+                    <span id="chip-estado" class="text-xs font-medium px-2 py-1 rounded bg-gray-100 text-gray-600">Apagado</span></div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="btn-pause" onclick="pausarReanudar()" class="btn text-amber-600 bg-amber-50 hover:bg-amber-100"><i class="fas fa-pause"></i> Pausar</button>
+                    <button onclick="detener()" class="btn text-red-600 bg-red-50 hover:bg-red-100"><i class="fas fa-stop"></i> Detener</button>
+                    <button id="btn-replay" onclick="repetir()" class="btn text-green-700 bg-green-50 hover:bg-green-100 hidden"><i class="fas fa-redo"></i> Repetir video</button>
+                    <button onclick="cambiarFuente('webcam')" class="btn text-indigo-600 bg-indigo-50 hover:bg-indigo-100"><i class="fas fa-camera"></i> Webcam</button>
+                    <button onclick="cambiarFuente('rtsp')" class="btn text-indigo-600 bg-indigo-50 hover:bg-indigo-100"><i class="fas fa-network-wired"></i> Cámara IP</button>
+                    <label class="btn text-gray-600 bg-gray-100 hover:bg-gray-200"><i class="fas fa-image"></i> Imagen <input type="file" id="upload-img" accept="image/*" class="hidden" onchange="subirArchivo('imagen')"></label>
+                    <label class="btn text-gray-600 bg-gray-100 hover:bg-gray-200"><i class="fas fa-video"></i> Video <input type="file" id="upload-vid" accept="video/*" class="hidden" onchange="subirArchivo('video')"></label>
+                </div>
+            </header>
+
+            <div class="p-8 flex flex-col gap-6 max-w-7xl mx-auto w-full">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between"><div><p class="text-sm text-gray-500 font-medium mb-1">Entradas</p><p id="trafico" class="text-3xl font-bold text-gray-800">0</p></div><div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl"><i class="fas fa-users"></i></div></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between"><div><p class="text-sm text-gray-500 font-medium mb-1">Agarrados (en vivo)</p><p id="agarrados" class="text-3xl font-bold text-gray-800">0</p></div><div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-xl"><i class="fas fa-hand-paper"></i></div></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between"><div><p class="text-sm text-gray-500 font-medium mb-1">Permanencia</p><p id="permanencia" class="text-3xl font-bold text-gray-800">0s</p></div><div class="w-12 h-12 bg-yellow-50 text-yellow-600 rounded-full flex items-center justify-center text-xl"><i class="fas fa-stopwatch"></i></div></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between"><div><p class="text-sm text-gray-500 font-medium mb-1">Interacciones guardadas</p><p id="interacciones" class="text-3xl font-bold text-gray-800">0</p></div><div class="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-xl"><i class="fas fa-database"></i></div></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 flex flex-col gap-4">
+                        <div class="bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+                            <div id="video-container" class="relative bg-gray-900 rounded-xl overflow-hidden h-[400px] flex items-center justify-center">
+                                <canvas id="video-canvas" width="480" height="360" class="w-full h-full object-contain"></canvas>
+                                <div id="video-loader" class="absolute z-10 hidden flex-col items-center"><div class="loader mb-2"></div><p id="loader-txt" class="text-gray-300 text-sm">Abriendo…</p></div>
+                                <div id="overlay-standby" class="absolute inset-0 bg-gray-900 z-30 flex flex-col items-center justify-center text-gray-400">
+                                    <i class="fas fa-video-slash text-6xl mb-4 text-gray-600"></i>
+                                    <h3 id="overlay-titulo" class="text-xl font-bold text-white mb-2">Cámara apagada</h3>
+                                    <p id="overlay-msg" class="text-sm mb-4 text-center px-6"></p>
+                                    <button onclick="cambiarFuente('webcam')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold transition"><i class="fas fa-power-off mr-2"></i> Encender webcam</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[460px]">
+                        <div class="p-4 border-b border-gray-100 flex items-center gap-2"><div class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center"><i class="fas fa-robot"></i></div><h3 class="font-semibold text-gray-800">Asistente Kovaq</h3></div>
+                        <div id="chat-box" class="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50/50"><div class="text-center text-xs text-gray-400 italic my-4">Pregúntame sobre el tráfico.</div></div>
+                        <div class="p-3 border-t border-gray-100 flex gap-2 bg-white rounded-b-2xl">
+                            <input type="text" id="chat-input" maxlength="500" placeholder="Ej: ¿Cómo va el tráfico?" class="flex-1 bg-gray-50 text-sm p-3 rounded-xl outline-none border border-gray-200 text-gray-700" onkeypress="if(event.key==='Enter') preguntarIA()">
+                            <button id="btn-chat" onclick="preguntarIA()" class="bg-indigo-600 hover:bg-indigo-700 text-white w-10 h-10 rounded-xl flex items-center justify-center transition"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        const $ = (id) => document.getElementById(id);
+        const canvas = $('video-canvas'), ctx = canvas.getContext('2d');
+        let socket = null, timerStats = null, timerEstado = null, decodificando = false, sesionActiva = false;
+        const auth = () => ({ "Authorization": `Bearer ${localStorage.getItem("token")}` });
+
+        function cerrarSesion() { sesionActiva = false; localStorage.removeItem("token"); window.location.reload(); }
+
+        async function hacerLogin() {
+            const formData = new URLSearchParams();
+            formData.append("username", $("user").value);
+            formData.append("password", $("pass").value);
+            try {
+                const res = await fetch(`${API_URL}/api/login`, { method: "POST", body: formData });
+                if (res.ok) { localStorage.setItem("token", (await res.json()).access_token); mostrarDashboard(); }
+                else { $("error-msg").classList.remove("hidden"); }
+            } catch (e) { $("error-msg").textContent = "Sin conexión con el servidor"; $("error-msg").classList.remove("hidden"); }
+        }
+
+        // ---- Video: se descartan cuadros si el navegador va atrasado (sin acumular retraso) ----
+        function conectarWebSocket() {
+            if (socket) { socket.onclose = null; socket.close(); }
+            const protocolo = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            socket = new WebSocket(`${protocolo}//${window.location.host}/ws/video?token=${encodeURIComponent(localStorage.getItem("token") || "")}`);
+            socket.binaryType = "blob";
+            socket.onmessage = async (ev) => {
+                if (decodificando) return;
+                decodificando = true;
+                try {
+                    const bmp = await createImageBitmap(ev.data);
+                    if (canvas.width !== bmp.width) { canvas.width = bmp.width; canvas.height = bmp.height; }
+                    ctx.drawImage(bmp, 0, 0); bmp.close();
+                } catch (e) { } finally { decodificando = false; }
+            };
+            socket.onclose = () => { if (sesionActiva) setTimeout(conectarWebSocket, 2000); };
+        }
+
+        function mostrarDashboard() {
+            sesionActiva = true;
+            $("login-screen").classList.add("hidden");
+            $("dashboard").classList.remove("hidden");
+            conectarWebSocket();
+            actualizarDatos(); sincronizarEstado();
+            timerStats = setInterval(actualizarDatos, 5000);
+            timerEstado = setInterval(sincronizarEstado, 1000);
+        }
+
+        // ---- Estado de la cámara: la pantalla siempre refleja lo que pasa en el servidor ----
+        const ETIQUETAS = { apagado: ["Apagado", "bg-gray-100 text-gray-600"], abriendo: ["Abriendo…", "bg-amber-100 text-amber-700"],
+            en_vivo: ["En vivo", "bg-green-100 text-green-700"], procesando: ["Procesando", "bg-green-100 text-green-700"],
+            sin_senal: ["Sin señal (reintentando)", "bg-amber-100 text-amber-700"], terminado: ["Terminado", "bg-blue-100 text-blue-700"],
+            error: ["Error", "bg-red-100 text-red-700"] };
+        async function sincronizarEstado() {
+            try {
+                const res = await fetch(`${API_URL}/api/estado`, { headers: auth() });
+                if (res.status === 401) { cerrarSesion(); return; }
+                const e = await res.json();
+                const [txt, clases] = ETIQUETAS[e.estado] || ETIQUETAS.apagado;
+                $("chip-estado").textContent = e.pausado ? "Pausado" : txt;
+                $("chip-estado").className = "text-xs font-medium px-2 py-1 rounded " + clases;
+                const apagada = e.estado === "apagado" || e.estado === "error";
+                $("overlay-standby").classList.toggle("hidden", !apagada);
+                $("overlay-titulo").textContent = e.estado === "error" ? "No se pudo abrir la fuente" : "Cámara apagada";
+                $("overlay-msg").textContent = e.mensaje || "";
+                $("video-loader").classList.toggle("hidden", e.estado !== "abriendo"); $("video-loader").classList.toggle("flex", e.estado === "abriendo");
+                $("btn-replay").classList.toggle("hidden", !(e.estado === "terminado" && e.fuente === "video"));
+                const btn = $("btn-pause");
+                btn.innerHTML = e.pausado ? `<i class="fas fa-play"></i> Reanudar` : `<i class="fas fa-pause"></i> Pausar`;
+                btn.className = "btn " + (e.pausado ? "text-green-600 bg-green-50 hover:bg-green-100" : "text-amber-600 bg-amber-50 hover:bg-amber-100");
+            } catch (e) { }
+        }
+
+        async function post(ruta, cuerpo) {
+            try { return await fetch(`${API_URL}${ruta}`, { method: "POST", headers: auth(), body: cuerpo }); }
+            catch (e) { alert("Error de red."); }
+        }
+        const pausarReanudar = async () => { await post("/api/toggle_pause"); sincronizarEstado(); };
+        const detener = async () => { await post("/api/apagar"); ctx.clearRect(0, 0, canvas.width, canvas.height); sincronizarEstado(); };
+        const repetir = async () => { await post("/api/replay"); sincronizarEstado(); };
+        const cambiarFuente = async (tipo) => { await post(`/api/upload_source?tipo=${tipo}`); sincronizarEstado(); };
+
+        async function subirArchivo(tipo) {
+            const input = tipo === 'imagen' ? $('upload-img') : $('upload-vid');
+            const file = input.files[0]; if (!file) return;
+            const formData = new FormData(); formData.append("file", file);
+            $("loader-txt").textContent = "Subiendo…";
+            const res = await post(`/api/upload_source?tipo=${tipo}`, formData);
+            if (res && !res.ok) { const d = await res.json().catch(() => ({})); alert(d.detail || "No se pudo subir el archivo"); }
+            input.value = ""; sincronizarEstado();
+        }
+
+        async function actualizarDatos() {
+            if (!localStorage.getItem("token")) return;
+            try {
+                const res = await fetch(`${API_URL}/api/stats`, { headers: auth() });
+                if (res.status === 401) { cerrarSesion(); return; }
+                const d = await res.json();
+                $('trafico').textContent = d.entradas_tiempo_real || 0;
+                $('agarrados').textContent = d.agarrados_tiempo_real || 0;
+                $('permanencia').textContent = (d.tiempo_promedio_percha || 0) + 's';
+                $('interacciones').textContent = (d.productos_tomados || []).reduce((s, p) => s + (p.veces || 0), 0);
+            } catch (e) { }
+        }
+
+        // ---- Chat: textContent (sin inyección de HTML), errores visibles, sesión vencida controlada ----
+        function burbuja(texto, mio) {
+            const fila = document.createElement("div"); fila.className = mio ? "text-right" : "text-left";
+            const b = document.createElement("span");
+            b.className = (mio ? "bg-indigo-600 text-white rounded-tr-none" : "bg-white border border-gray-200 text-gray-700 rounded-tl-none") + " p-3 rounded-2xl inline-block max-w-[85%] text-sm whitespace-pre-wrap text-left";
+            b.textContent = texto; fila.appendChild(b); $("chat-box").appendChild(fila);
+            $("chat-box").scrollTop = $("chat-box").scrollHeight; return fila;
+        }
+        async function preguntarIA() {
+            const input = $("chat-input"), boton = $("btn-chat"), mensaje = input.value.trim();
+            if (!mensaje) return;
+            burbuja(mensaje, true); input.value = ""; boton.disabled = true;
+            const espera = document.createElement("div"); espera.className = "text-left text-gray-400 italic text-xs";
+            espera.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Pensando…'; $("chat-box").appendChild(espera);
+            try {
+                const res = await fetch(`${API_URL}/api/chat`, { method: "POST", headers: { ...auth(), "Content-Type": "application/json" }, body: JSON.stringify({ mensaje }) });
+                espera.remove();
+                if (res.status === 401) { burbuja("Tu sesión venció. Inicia sesión de nuevo.", false); setTimeout(cerrarSesion, 1500); return; }
+                const d = await res.json().catch(() => ({}));
+                burbuja(res.ok ? (d.respuesta || "Sin respuesta.") : ("Error: " + (d.detail ? JSON.stringify(d.detail) : res.status)), false);
+            } catch (e) { espera.remove(); burbuja("No hay conexión con el servidor.", false); }
+            finally { boton.disabled = false; }
+        }
+
+        if (localStorage.getItem("token")) mostrarDashboard();
+    </script>
+</body>
+</html>

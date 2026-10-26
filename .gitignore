@@ -1,0 +1,19 @@
+# Entornos virtuales y configuraciones IDE
+.venv/
+.vscode/
+
+# Archivos de compilación de Python
+__pycache__/
+*.pyc
+
+# Variables de entorno secretas
+.env
+
+# Archivos de prueba y subidas
+uploads/*
+!uploads/.gitkeep
+probar_groq.py
+
+# Bases de datos SQLite locales si se generan
+*.db
+local_retail.db
