@@ -15,8 +15,7 @@ from passlib.context import CryptContext
 from ai_agent import preguntar_a_los_datos
 from auth import crear_token_acceso, verificar_token
 from camera import camara
-from database import init_db, leer, escribir, obtener_estadisticas
-
+from database import init_db, leer, ejecutar, obtener_estadisticas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 EXT = {"imagen": (".jpg", ".jpeg", ".png", ".bmp", ".webp"), "video": (".mp4", ".avi", ".mov", ".mkv", ".webm")}
 MAX_MB = 300
@@ -69,12 +68,12 @@ async def register_user(user: UserRegister):
     hashed_pwd = pwd_context.hash(user.password)
     
     # Verifica si el usuario ya existe en Turso
-    existe = await escribir("SELECT username FROM users WHERE username = ?", (user.username,), uno=True)
+    existe = await ejecutar("SELECT username FROM users WHERE username = ?", (user.username,), uno=True)
     if existe:
         raise HTTPException(status_code=400, detail="El usuario ya existe")
         
     # Inserta el nuevo usuario usando la estructura exacta de la tabla `users`
-    await escribir(
+    await ejecutar(
         "INSERT INTO users (username, hashed_password, role) VALUES (?, ?, ?)",
         (user.username, hashed_pwd, 'admin')
     )
