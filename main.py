@@ -4,19 +4,18 @@ import shutil
 import uuid
 from contextlib import asynccontextmanager
 from typing import Optional
-
+from pydantic import BaseModel, Field
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from passlib.context import CryptContext
-from pydantic import BaseModel, Field
 
 from ai_agent import preguntar_a_los_datos
 from auth import crear_token_acceso, verificar_token
 from camera import camara
-from database import init_db, leer, obtener_estadisticas
+from database import init_db, leer, escribir, obtener_estadisticas
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 EXT = {"imagen": (".jpg", ".jpeg", ".png", ".bmp", ".webp"), "video": (".mp4", ".avi", ".mov", ".mkv", ".webm")}
@@ -60,6 +59,27 @@ async def get_user(token: str = Depends(oauth2_scheme)):
 class ChatReq(BaseModel):
     mensaje: str = Field(..., min_length=1, max_length=500)
 
+class UserRegister(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/api/register")
+async def register_user(user: UserRegister):
+    hashed_pwd = pwd_context.hash(user.password)
+    
+    # Verifica si el usuario ya existe en Turso
+    existe = await escribir("SELECT username FROM users WHERE username = ?", (user.username,), uno=True)
+    if existe:
+        raise HTTPException(status_code=400, detail="El usuario ya existe")
+        
+    # Inserta el nuevo usuario usando la estructura exacta de la tabla `users`
+    await escribir(
+        "INSERT INTO users (username, hashed_password, role) VALUES (?, ?, ?)",
+        (user.username, hashed_pwd, 'admin')
+    )
+    return {"status": "ok", "message": f"Usuario {user.username} creado exitosamente"}
+
 
 @app.get("/")
 def root():
@@ -68,8 +88,8 @@ def root():
 
 @app.post("/api/login")
 def login(form: OAuth2PasswordRequestForm = Depends()):
-    # `def` (no `async def`): FastAPI lo corre en un hilo y la base remota + bcrypt no congelan el video
-    user = leer("SELECT username, password_hash FROM usuarios WHERE username = ?", (form.username,), uno=True)
+    # Corregido: consulta hacia la tabla `users` y columna `hashed_password`
+    user = leer("SELECT username, hashed_password FROM users WHERE username = ?", (form.username,), uno=True)
     if user and pwd_context.verify(form.password, user[1]):
         return {"access_token": crear_token_acceso({"sub": user[0]}), "token_type": "bearer"}
     raise HTTPException(status_code=401, detail="Credenciales incorrectas")
@@ -114,14 +134,14 @@ async def replay(user: dict = Depends(get_user)):
 
 @app.websocket("/ws/video")
 async def websocket_video(websocket: WebSocket, token: str = ""):
-    if not verificar_token(token):  # antes el video lo podía ver cualquiera sin iniciar sesión
+    if not verificar_token(token):
         await websocket.close(code=4401)
         return
     await websocket.accept()
     ultimo = -1
     try:
         while True:
-            ultimo, datos = await asyncio.to_thread(camara.get_frame_bytes, ultimo)  # JPEG fuera del bucle de eventos
+            ultimo, datos = await asyncio.to_thread(camara.get_frame_bytes, ultimo)
             if datos:
                 await websocket.send_bytes(datos)
             await asyncio.sleep(0.02 if datos else 0.04)
@@ -131,7 +151,7 @@ async def websocket_video(websocket: WebSocket, token: str = ""):
 
 @app.post("/api/upload_source")
 async def upload(tipo: str, file: Optional[UploadFile] = File(None), user: dict = Depends(get_user)):
-    if tipo in ("webcam", "rtsp"):  # rtsp usa RTSP_URL del .env
+    if tipo in ("webcam", "rtsp"):
         camara.cambiar_fuente(tipo)
         return {"status": "ok"}
     if tipo not in EXT or file is None:
@@ -143,7 +163,7 @@ async def upload(tipo: str, file: Optional[UploadFile] = File(None), user: dict 
 
     def guardar():
         with open(ruta, "wb") as f:
-            shutil.copyfileobj(file.file, f, 1024 * 1024)  # por trozos: no carga todo el video en memoria
+            shutil.copyfileobj(file.file, f, 1024 * 1024)
 
     await asyncio.to_thread(guardar)
     if os.path.getsize(ruta) > MAX_MB * 1024 * 1024:
