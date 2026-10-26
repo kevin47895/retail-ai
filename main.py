@@ -15,7 +15,9 @@ from passlib.context import CryptContext
 from ai_agent import preguntar_a_los_datos
 from auth import crear_token_acceso, verificar_token
 from camera import camara
-from database import init_db, leer, ejecutar, obtener_estadisticas
+# IMPORTACIONES EXACTAS DE TU DATABASE.PY:
+from database import init_db, leer, obtener_estadisticas
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 EXT = {"imagen": (".jpg", ".jpeg", ".png", ".bmp", ".webp"), "video": (".mp4", ".avi", ".mov", ".mkv", ".webm")}
 MAX_MB = 300
@@ -64,18 +66,18 @@ class UserRegister(BaseModel):
 
 
 @app.post("/api/register")
-async def register_user(user: UserRegister):
+def register_user(user: UserRegister):
     hashed_pwd = pwd_context.hash(user.password)
     
-    # Verifica si el usuario ya existe en Turso
-    existe = await ejecutar("SELECT username FROM users WHERE username = ?", (user.username,), uno=True)
+    # Comprobar si el usuario existe usando la tabla 'usuarios'
+    existe = leer("SELECT username FROM usuarios WHERE username = ?", (user.username,), uno=True)
     if existe:
         raise HTTPException(status_code=400, detail="El usuario ya existe")
         
-    # Inserta el nuevo usuario usando la estructura exacta de la tabla `users`
-    await ejecutar(
-        "INSERT INTO users (username, hashed_password, role) VALUES (?, ?, ?)",
-        (user.username, hashed_pwd, 'admin')
+    # Insertar en la tabla 'usuarios' usando la función 'leer'
+    leer(
+        "INSERT INTO usuarios (username, password_hash, nombre_completo, rol_id) VALUES (?, ?, ?, 1)",
+        (user.username, hashed_pwd, f"Usuario {user.username}")
     )
     return {"status": "ok", "message": f"Usuario {user.username} creado exitosamente"}
 
@@ -87,8 +89,8 @@ def root():
 
 @app.post("/api/login")
 def login(form: OAuth2PasswordRequestForm = Depends()):
-    # Corregido: consulta hacia la tabla `users` y columna `hashed_password`
-    user = leer("SELECT username, hashed_password FROM users WHERE username = ?", (form.username,), uno=True)
+    # Corregido: lee de la tabla 'usuarios' y columna 'password_hash' de tu database.py
+    user = leer("SELECT username, password_hash FROM usuarios WHERE username = ?", (form.username,), uno=True)
     if user and pwd_context.verify(form.password, user[1]):
         return {"access_token": crear_token_acceso({"sub": user[0]}), "token_type": "bearer"}
     raise HTTPException(status_code=401, detail="Credenciales incorrectas")
