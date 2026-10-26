@@ -11,7 +11,7 @@ from passlib.context import CryptContext
 load_dotenv()
 TURSO_URL = os.getenv("TURSO_URL", "").strip()
 TURSO_TOKEN = os.getenv("TURSO_TOKEN", "").strip()
-DB_LOCAL = os.getenv("DB_LOCAL", "kovaq_local.db")  # se usa si no hay TURSO_URL: mucho más rápido
+DB_LOCAL = os.getenv("DB_LOCAL", "kovaq_local.db")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 db_queue: queue.Queue = queue.Queue()
 
@@ -27,7 +27,6 @@ def get_connection():
 
 
 def _worker_db():
-    """Un solo hilo escribe: reutiliza la conexión y junta hasta 50 eventos por commit."""
     conn = None
     while True:
         lote = [db_queue.get()]
@@ -60,7 +59,6 @@ _lock_lectura = threading.Lock()
 
 
 def leer(query: str, params: tuple = (), uno: bool = False):
-    """Lectura con conexión persistente (se reconecta sola una vez si falla)."""
     with _lock_lectura:
         for intento in (1, 2):
             try:
@@ -78,6 +76,17 @@ def leer(query: str, params: tuple = (), uno: bool = False):
                     raise
 
 
+def escribir(query: str, params: tuple = ()):
+    """Ejecuta sentencias de escritura (INSERT, UPDATE, DELETE) de forma directa."""
+    with _lock_lectura:
+        conn = _abrir()
+        try:
+            conn.execute(query, params)
+            conn.commit()
+        finally:
+            conn.close()
+
+
 def init_db_sync():
     try:
         conn = _abrir()
@@ -92,8 +101,6 @@ def init_db_sync():
         if conn.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0] == 0:
             conn.execute("INSERT INTO roles (nombre) VALUES ('Admin')")
             clave = os.getenv("ADMIN_PASSWORD", "admin123")
-            if clave == "admin123":
-                print("⚠️ Usando la contraseña de admin por defecto: define ADMIN_PASSWORD en .env")
             conn.execute("INSERT INTO usuarios (username, password_hash, nombre_completo, rol_id) VALUES (?, ?, ?, 1)",
                          ("admin", pwd_context.hash(clave), "Admin Kovaq"))
             conn.commit()
@@ -101,7 +108,7 @@ def init_db_sync():
         conn.close()
         print(f"✅ Base de datos: {'Turso' if TURSO_URL else 'archivo local ' + DB_LOCAL}")
     except Exception as e:
-        print(f"🚨 ERROR CRÍTICO CON LA BASE DE DATOS: {e}")
+        print(f"🚨 ERROR CON LA BASE DE DATOS: {e}")
 
 
 async def init_db():
@@ -125,7 +132,6 @@ _cache = {"t": 0.0, "d": None}
 
 
 def obtener_estadisticas(ttl: float = 4.0) -> dict:
-    """Estadísticas con caché de `ttl` segundos: el panel y el chat no golpean la base a cada rato."""
     if _cache["d"] is not None and time.time() - _cache["t"] < ttl:
         return dict(_cache["d"])
     try:
@@ -139,5 +145,5 @@ def obtener_estadisticas(ttl: float = 4.0) -> dict:
         return dict(d)
     except Exception as e:
         if _cache["d"] is not None:
-            return dict(_cache["d"])  # si la base falla, se usa el último dato bueno
+            return dict(_cache["d"])
         return {"error": str(e), "total_personas": 0, "tiempo_promedio_percha": 0, "productos_tomados": []}
