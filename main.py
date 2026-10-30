@@ -38,7 +38,7 @@ async def root():
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: str = None):
-    return templates.TemplateResponse("login.html", {"request": request, "error": error})
+    return templates.TemplateResponse(request, "login.html", {"error": error})
 
 @app.post("/login")
 async def login_action(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -47,7 +47,9 @@ async def login_action(request: Request, username: str = Form(...), password: st
         (username,), uno=True
     )
     if not usuario or not pwd_context.verify(password, usuario[2]):
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Credenciales inválidas. Verifique su usuario y contraseña."})
+        return templates.TemplateResponse(request, "login.html", {
+            "error": "Credenciales inválidas. Verifique su usuario y contraseña."
+        })
 
     token = jwt.encode({"sub": usuario[1], "rol": usuario[4]}, SECRET_KEY, algorithm=ALGORITHM)
     response = RedirectResponse(url="/dashboard", status_code=303)
@@ -88,8 +90,8 @@ async def dashboard(request: Request):
         user = await obtener_usuario_actual(request)
     except HTTPException:
         return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request, "usuario_actual": user, "menu": MENU
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "usuario_actual": user, "menu": MENU
     })
 
 @app.get("/usuarios", response_class=HTMLResponse)
@@ -103,8 +105,8 @@ async def listar_usuarios(request: Request):
 
     usuarios = leer("SELECT u.id, u.username, u.nombre_completo, r.nombre, u.estado FROM usuarios u JOIN roles r ON u.rol_id = r.id")
     roles = leer("SELECT id, nombre FROM roles")
-    return templates.TemplateResponse("usuarios.html", {
-        "request": request, "usuarios": usuarios, "roles": roles,
+    return templates.TemplateResponse(request, "usuarios.html", {
+        "usuarios": usuarios, "roles": roles,
         "usuario_actual": user, "menu": MENU
     })
 
