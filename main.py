@@ -91,7 +91,7 @@ async def dashboard(request: Request):
     except HTTPException:
         return RedirectResponse(url="/login", status_code=303)
     return templates.TemplateResponse(request, "dashboard.html", {
-        "usuario_actual": user, "menu": MENU
+        "usuario_actual": user, "menu": MENU, "modo": MODO
     })
 
 @app.get("/usuarios", response_class=HTMLResponse)
@@ -107,7 +107,7 @@ async def listar_usuarios(request: Request):
     roles = leer("SELECT id, nombre FROM roles")
     return templates.TemplateResponse(request, "usuarios.html", {
         "usuarios": usuarios, "roles": roles,
-        "usuario_actual": user, "menu": MENU
+        "usuario_actual": user, "menu": MENU, "modo": MODO
     })
 
 @app.post("/usuarios/crear")

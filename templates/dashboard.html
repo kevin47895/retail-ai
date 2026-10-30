@@ -99,6 +99,8 @@
 
         <!-- COLUMNA IZQUIERDA: VIDEO Y MAPA -->
         <div class="col-lg-8">
+
+            {% if modo == 'local' %}
             <div class="card bg-dark border-secondary shadow-sm">
                 <div class="card-header bg-secondary bg-opacity-10 border-secondary py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span class="text-white small fw-bold"><i class="bi bi-camera-video me-1"></i> Transmisión IA en Vivo</span>
@@ -120,6 +122,12 @@
                     </div>
                 </div>
             </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-1"></i>
+                El video en vivo y la subida de archivos solo funcionan en la PC local. Aquí puedes ver el informe y consultar el asistente con los datos registrados.
+            </div>
+            {% endif %}
 
             <div class="card bg-dark border-secondary shadow-sm mt-4">
                 <div class="card-header bg-secondary bg-opacity-10 border-secondary text-white small fw-bold">
@@ -174,13 +182,16 @@ function escapar(texto) {
 }
 
 function mostrarEstado(texto) {
+    if (!loadingOverlay) return;
     document.getElementById("loading-text").innerText = texto;
     loadingOverlay.style.display = "flex";
 }
 
-// ---------- VIDEO ----------
+// ---------- VIDEO (solo modo local) ----------
 // Cierra la conexión MJPEG anterior y crea un <img> nuevo con src único
 function forzarRecargaVideo() {
+    if (!videoContainer) return;
+
     const viejo = document.getElementById("video-stream");
     if (viejo) {
         viejo.onload = null;
@@ -232,7 +243,7 @@ async function subirArchivo() {
     }
 }
 
-forzarRecargaVideo();
+if (videoContainer) forzarRecargaVideo();
 
 // ---------- INFORME ----------
 async function cargarInforme() {
