@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3 text-light" style="min-height: 100vh; background-color: #111827;">
+
+    <!-- ENCABEZADO: título, estado y perfil del usuario -->
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3 flex-wrap gap-3">
+        <div>
+            <h2 class="text-white fw-bold m-0"><i class="bi bi-speedometer2 text-primary me-2"></i> Panel de Analítica e IA</h2>
+            <p class="text-light opacity-75 small m-0">Monitoreo en tiempo real de tráfico, perchas y seguridad de retail</p>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-dark border border-secondary text-light px-3 py-2">
+                <i class="bi bi-circle-fill text-success small me-1"></i> Sistema Operativo
+            </span>
+            <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center"
+                     style="width: 42px; height: 42px;">
+                    {{ usuario_actual.nombre[:1]|upper }}
+                </div>
+                <div class="lh-sm">
+                    <div class="fw-semibold text-white">{{ usuario_actual.nombre }}</div>
+                    <small class="text-info text-uppercase">{{ usuario_actual.rol }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TARJETAS DE MÉTRICAS -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary text-white shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-light opacity-75 text-uppercase small">Afluencia Actual</h6>
+                    <h3 class="fw-bold text-primary mb-0">28 <span class="fs-6 text-light opacity-75">personas</span></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary text-white shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-light opacity-75 text-uppercase small">Permanencia Promedio</h6>
+                    <h3 class="fw-bold text-info mb-0">4.5 <span class="fs-6 text-light opacity-75">min</span></h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary text-white shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-light opacity-75 text-uppercase small">Interacciones en Percha</h6>
+                    <h3 class="fw-bold text-warning mb-0">142</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark border-secondary text-white shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-light opacity-75 text-uppercase small">Estado del Modelo</h6>
+                    <h3 class="fw-bold text-success mb-0 fs-5 mt-2">YOLOv8 Activo</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFORME VISUAL DE DATOS (desde /api/stats) -->
+    <div class="card bg-dark border-secondary shadow-sm mb-4 text-light">
+        <div class="card-header bg-secondary bg-opacity-10 border-secondary text-white small fw-bold d-flex justify-content-between">
+            <span><i class="bi bi-file-earmark-bar-graph me-1"></i> Informe de Analítica</span>
+            <span id="informe-fecha" class="opacity-75"></span>
+        </div>
+        <div class="card-body">
+            <p id="informe-resumen" class="mb-3">Cargando informe...</p>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="border border-secondary rounded p-3">
+                        <small class="text-light opacity-75 text-uppercase">Detecciones</small>
+                        <div id="informe-trafico" class="fs-4 fw-bold text-primary">-</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border border-secondary rounded p-3">
+                        <small class="text-light opacity-75 text-uppercase">Permanencia promedio</small>
+                        <div id="informe-permanencia" class="fs-4 fw-bold text-info">-</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border border-secondary rounded p-3">
+                        <small class="text-light opacity-75 text-uppercase">Interacciones</small>
+                        <div id="informe-interacciones" class="fs-4 fw-bold text-warning">-</div>
+                    </div>
+                </div>
+            </div>
+            <h6 class="text-white">Productos con más interacción</h6>
+            <ul id="informe-productos" class="list-group"></ul>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- COLUMNA IZQUIERDA: VIDEO Y MAPA -->
+        <div class="col-lg-8">
+            <div class="card bg-dark border-secondary shadow-sm">
+                <div class="card-header bg-secondary bg-opacity-10 border-secondary py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="text-white small fw-bold"><i class="bi bi-camera-video me-1"></i> Transmisión IA en Vivo</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input type="file" id="archivo-input" accept="video/*,image/*"
+                               class="form-control form-control-sm bg-dark border-secondary text-light" style="max-width: 240px;">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="subirArchivo()">
+                            <i class="bi bi-upload"></i> Subir
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body text-center p-2">
+                    <div id="video-container" style="position: relative; width: 100%; min-height: 420px; background: #000; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        <div id="loading-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.85); color: #f8f9fa; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
+                            <div class="spinner-border text-primary mb-2" role="status"></div>
+                            <span id="loading-text" class="small">Conectando con la cámara...</span>
+                        </div>
+                        <!-- El <img id="video-stream"> se crea desde JS en forzarRecargaVideo() -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-dark border-secondary shadow-sm mt-4">
+                <div class="card-header bg-secondary bg-opacity-10 border-secondary text-white small fw-bold">
+                    <i class="bi bi-grid-3x3 me-1"></i> Mapa de Calor y Distribución de Perchas
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="border border-secondary rounded p-4 text-light opacity-75 bg-black bg-opacity-25">
+                        <i class="bi bi-layers fs-2 text-primary mb-2 d-block"></i>
+                        <span>Zona de diseño interactivo de perchas disponible. Haga clic para configurar zonas de interés (ROI).</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: CHAT -->
+        <div class="col-lg-4">
+            <div class="card bg-dark border-secondary shadow-sm h-100 d-flex flex-column">
+                <div class="card-header bg-secondary bg-opacity-10 border-secondary text-white small fw-bold">
+                    <i class="bi bi-chat-dots me-1"></i> Asistente IA Kovaq
+                </div>
+
+                <div class="card-body flex-grow-1 overflow-auto p-3" id="chat-messages" style="max-height: 380px; min-height: 300px;"></div>
+
+                <div class="card-footer bg-secondary bg-opacity-10 border-secondary p-2">
+                    <form id="chat-form" onsubmit="preguntarIA(event)" class="input-group">
+                        <input type="text" id="chat-input" class="form-control bg-dark border-secondary text-light form-control-sm"
+                               placeholder="Escribe una consulta..." oninput="validarInputChat()" autocomplete="off">
+                        <button type="submit" id="chat-submit-btn" class="btn btn-primary btn-sm" disabled>
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const loadingOverlay = document.getElementById("loading-overlay");
+const videoContainer = document.getElementById("video-container");
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const chatBtn = document.getElementById("chat-submit-btn");
+
+function escapar(texto) {
+    const d = document.createElement("div");
+    d.textContent = texto ?? "";
+    return d.innerHTML;
+}
+
+function mostrarEstado(texto) {
+    document.getElementById("loading-text").innerText = texto;
+    loadingOverlay.style.display = "flex";
+}
+
+// ---------- VIDEO ----------
+// Cierra la conexión MJPEG anterior y crea un <img> nuevo con src único
+function forzarRecargaVideo() {
+    const viejo = document.getElementById("video-stream");
+    if (viejo) {
+        viejo.onload = null;
+        viejo.onerror = null;
+        viejo.src = "";
+        viejo.remove();
+    }
+
+    const img = document.createElement("img");
+    img.id = "video-stream";
+    img.alt = "Stream local YOLO";
+    img.style.cssText = "width:100%; height:auto; max-height:480px; object-fit:contain; display:block;";
+    img.onload = () => { loadingOverlay.style.display = "none"; };
+    img.onerror = () => {
+        mostrarEstado("Cámara no disponible. Reintentando...");
+        setTimeout(forzarRecargaVideo, 4000);
+    };
+    videoContainer.appendChild(img);
+    mostrarEstado("Conectando con la fuente...");
+    img.src = "/api/video_feed?t=" + Date.now();
+}
+
+async function subirArchivo() {
+    const input = document.getElementById("archivo-input");
+    const archivo = input.files[0];
+    if (!archivo) {
+        mostrarEstado("Selecciona un video o imagen primero.");
+        setTimeout(() => { loadingOverlay.style.display = "none"; }, 2000);
+        return;
+    }
+
+    mostrarEstado("Subiendo archivo...");
+    const datos = new FormData();
+    datos.append("archivo", archivo);
+
+    try {
+        const res = await fetch("/api/upload", { method: "POST", body: datos });
+        if (res.status === 401) { window.location.href = "/login"; return; }
+        if (!res.ok) {
+            let detalle = "";
+            try { detalle = (await res.json()).detail || ""; } catch {}
+            throw new Error(detalle || `Error ${res.status}`);
+        }
+        input.value = "";
+        mostrarEstado("Procesando con YOLO...");
+        forzarRecargaVideo();
+    } catch (err) {
+        mostrarEstado(`No se pudo subir el archivo: ${err.message}`);
+    }
+}
+
+forzarRecargaVideo();
+
+// ---------- INFORME ----------
+async function cargarInforme() {
+    try {
+        const res = await fetch("/api/stats");
+        if (res.status === 401) { window.location.href = "/login"; return; }
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const s = await res.json();
+
+        document.getElementById("informe-resumen").innerText = s.resumen;
+        document.getElementById("informe-trafico").innerText = s.trafico;
+        document.getElementById("informe-permanencia").innerText = `${s.permanencia_promedio_seg} s`;
+        document.getElementById("informe-interacciones").innerText = s.interacciones;
+        document.getElementById("informe-fecha").innerText = "Actualizado " + new Date().toLocaleTimeString("es-EC");
+
+        const ul = document.getElementById("informe-productos");
+        ul.innerHTML = s.top_productos.length
+            ? s.top_productos.map(p =>
+                `<li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between">
+                    <span>${escapar(p.producto)}</span>
+                    <span class="badge bg-warning text-dark">${p.veces}</span>
+                 </li>`).join("")
+            : `<li class="list-group-item bg-dark text-light border-secondary opacity-75">Sin interacciones registradas</li>`;
+    } catch (err) {
+        document.getElementById("informe-resumen").innerText = `No se pudo cargar el informe: ${err.message}`;
+    }
+}
+
+cargarInforme();
+setInterval(cargarInforme, 10000);
+
+// ---------- CHAT ----------
+function agregarMensaje(html) {
+    chatMessages.insertAdjacentHTML("beforeend", html);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function validarInputChat() {
+    chatBtn.disabled = chatInput.disabled || chatInput.value.trim() === "";
+}
+
+async function preguntarIA(e) {
+    e.preventDefault();
+    const mensaje = chatInput.value.trim();
+    if (!mensaje || chatBtn.disabled) return;
+
+    agregarMensaje(`<div class="mb-2 text-end"><span class="badge bg-secondary text-light p-2 rounded text-wrap">${escapar(mensaje)}</span></div>`);
+    chatInput.value = "";
+    chatInput.disabled = true;
+    chatBtn.disabled = true;
+
+    const cargando = document.createElement("div");
+    cargando.className = "mb-2 text-start";
+    cargando.innerHTML = `<span class="badge bg-primary bg-opacity-25 text-info p-2 rounded"><span class="spinner-border spinner-border-sm me-1"></span> Cargando...</span>`;
+    chatMessages.appendChild(cargando);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    const controlador = new AbortController();
+    const timeout = setTimeout(() => controlador.abort(), 30000);
+
+    try {
+        const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mensaje }),
+            signal: controlador.signal
+        });
+        if (res.status === 401) { window.location.href = "/login"; return; }
+        if (!res.ok) {
+            let detalle = "";
+            try { detalle = (await res.json()).detail || ""; } catch {}
+            throw new Error(detalle || `Error ${res.status} del servidor`);
+        }
+        const datos = await res.json();
+        cargando.remove();
+        agregarMensaje(`<div class="mb-2 text-start"><span class="badge bg-primary bg-opacity-25 text-info p-2 rounded text-wrap">${escapar(datos.respuesta)}</span></div>`);
+    } catch (err) {
+        cargando.remove();
+        const texto = err.name === "AbortError"
+            ? "Tiempo de espera agotado (30 s). Intenta de nuevo."
+            : `No se pudo obtener respuesta: ${err.message}`;
+        agregarMensaje(`<div class="mb-2 text-start"><span class="badge bg-danger text-white p-2 rounded text-wrap">${escapar(texto)}</span></div>`);
+    } finally {
+        clearTimeout(timeout);
+        chatInput.disabled = false;
+        chatInput.focus();
+        validarInputChat();
+    }
+}
+</script>
+{% endblock %}

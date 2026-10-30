@@ -1,19 +1,21 @@
-# Entornos virtuales y configuraciones IDE
-.venv/
-.vscode/
+# Secretos (claves de Turso y JWT)
+.env
 
-# Archivos de compilación de Python
+# Entorno virtual de Python
+.venv/
+pyvenv.cfg
+
+# Archivos generados por Python
 __pycache__/
 *.pyc
 
-# Variables de entorno secretas
-.env
-
-# Archivos de prueba y subidas
-uploads/*
-!uploads/.gitkeep
-probar_groq.py
-
-# Bases de datos SQLite locales si se generan
+# Archivos subidos y bases de datos locales
+uploads/
 *.db
-local_retail.db
+
+# Configuración personal de VS Code
+.vscode/
+
+# Archivos de bloqueo y configuración local
+.lock
+.runtimeconfig.json
