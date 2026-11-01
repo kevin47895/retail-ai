@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid px-4 py-3 text-light" style="min-height: 100vh; background-color: #111827;">
+<div class="container-fluid px-4 py-3 text-light" style="min-height: 100vh; background-color: #111827; overflow-x: hidden;">
 
     <!-- ENCABEZADO: título, estado y perfil del usuario -->
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3 flex-wrap gap-3">
@@ -100,15 +100,25 @@
         <!-- COLUMNA IZQUIERDA: VIDEO Y MAPA -->
         <div class="col-lg-8">
 
-            {% if modo == 'local' %}
             <div class="card bg-dark border-secondary shadow-sm">
                 <div class="card-header bg-secondary bg-opacity-10 border-secondary py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span class="text-white small fw-bold"><i class="bi bi-camera-video me-1"></i> Transmisión IA en Vivo</span>
-                    <div class="d-flex gap-2 align-items-center">
+                    <span class="text-white small fw-bold">
+                        <i class="bi bi-camera-video me-1"></i>
+                        Transmisión IA {% if modo == 'nube' %}(en vivo, retraso de ~1 s){% else %}en Vivo{% endif %}
+                    </span>
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        {% if modo == 'local' %}
                         <input type="file" id="archivo-input" accept="video/*,image/*"
-                               class="form-control form-control-sm bg-dark border-secondary text-light" style="max-width: 240px;">
+                               class="form-control form-control-sm bg-dark border-secondary text-light" style="max-width: 220px;">
                         <button type="button" class="btn btn-primary btn-sm" onclick="subirArchivo()">
                             <i class="bi bi-upload"></i> Subir
+                        </button>
+                        {% endif %}
+                        <button type="button" id="btn-pausa" class="btn btn-warning btn-sm" onclick="controlar('pausa')">
+                            <i class="bi bi-pause-fill"></i> Pausar
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="controlar('parar')">
+                            <i class="bi bi-stop-fill"></i> Parar
                         </button>
                     </div>
                 </div>
@@ -116,18 +126,12 @@
                     <div id="video-container" style="position: relative; width: 100%; min-height: 420px; background: #000; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                         <div id="loading-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.85); color: #f8f9fa; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
                             <div class="spinner-border text-primary mb-2" role="status"></div>
-                            <span id="loading-text" class="small">Conectando con la cámara...</span>
+                            <span id="loading-text" class="small">Conectando con la fuente...</span>
                         </div>
                         <!-- El <img id="video-stream"> se crea desde JS en forzarRecargaVideo() -->
                     </div>
                 </div>
             </div>
-            {% else %}
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle me-1"></i>
-                El video en vivo y la subida de archivos solo funcionan en la PC local. Aquí puedes ver el informe y consultar el asistente con los datos registrados.
-            </div>
-            {% endif %}
 
             <div class="card bg-dark border-secondary shadow-sm mt-4">
                 <div class="card-header bg-secondary bg-opacity-10 border-secondary text-white small fw-bold">
@@ -169,11 +173,17 @@
 
 {% block extra_scripts %}
 <script>
+const MODO_APP = document.body.dataset.modo;
+const ES_NUBE = MODO_APP === "nube";
+const VIDEO_URL = ES_NUBE ? "/api/video_live" : "/api/video_feed";
+
 const loadingOverlay = document.getElementById("loading-overlay");
 const videoContainer = document.getElementById("video-container");
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const chatBtn = document.getElementById("chat-submit-btn");
+
+let videoPausadoWeb = false;
 
 function escapar(texto) {
     const d = document.createElement("div");
@@ -187,8 +197,7 @@ function mostrarEstado(texto) {
     loadingOverlay.style.display = "flex";
 }
 
-// ---------- VIDEO (solo modo local) ----------
-// Cierra la conexión MJPEG anterior y crea un <img> nuevo con src único
+// ---------- VIDEO ----------
 function forzarRecargaVideo() {
     if (!videoContainer) return;
 
@@ -202,7 +211,7 @@ function forzarRecargaVideo() {
 
     const img = document.createElement("img");
     img.id = "video-stream";
-    img.alt = "Stream local YOLO";
+    img.alt = "Stream YOLO";
     img.style.cssText = "width:100%; height:auto; max-height:480px; object-fit:contain; display:block;";
     img.onload = () => { loadingOverlay.style.display = "none"; };
     img.onerror = () => {
@@ -211,7 +220,7 @@ function forzarRecargaVideo() {
     };
     videoContainer.appendChild(img);
     mostrarEstado("Conectando con la fuente...");
-    img.src = "/api/video_feed?t=" + Date.now();
+    img.src = VIDEO_URL + "?t=" + Date.now();
 }
 
 async function subirArchivo() {
@@ -240,6 +249,54 @@ async function subirArchivo() {
         forzarRecargaVideo();
     } catch (err) {
         mostrarEstado(`No se pudo subir el archivo: ${err.message}`);
+    }
+}
+
+function actualizarBotonPausa(pausado) {
+    const btn = document.getElementById("btn-pausa");
+    if (!btn) return;
+    const esPausado = pausado ?? videoPausadoWeb;
+    btn.innerHTML = esPausado
+        ? '<i class="bi bi-play-fill"></i> Reanudar'
+        : '<i class="bi bi-pause-fill"></i> Pausar';
+}
+
+function controlar(accion) {
+    if (accion === "pausa") {
+        if (ES_NUBE) {
+            // En la web solo se pausa la vista
+            videoPausadoWeb = !videoPausadoWeb;
+            const img = document.getElementById("video-stream");
+            if (img) img.style.opacity = videoPausadoWeb ? "0.4" : "1";
+            actualizarBotonPausa();
+            return;
+        }
+        fetch("/api/control", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accion: "pausa" })
+        })
+            .then(r => r.json())
+            .then(d => actualizarBotonPausa(d.pausado))
+            .catch(err => mostrarEstado("Error: " + err.message));
+        return;
+    }
+
+    if (accion === "parar") {
+        if (ES_NUBE) {
+            const img = document.getElementById("video-stream");
+            if (img) img.remove();
+            mostrarEstado("Transmisión detenida.");
+            return;
+        }
+        fetch("/api/control", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accion: "parar" })
+        }).then(() => {
+            actualizarBotonPausa(false);
+            mostrarEstado("Transmisión detenida.");
+        });
     }
 }
 

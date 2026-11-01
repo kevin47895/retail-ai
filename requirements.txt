@@ -12,3 +12,5 @@ ultralytics
 torch
 torchvision
 libsql
+boto3
+imageio-ffmpeg

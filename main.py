@@ -1,11 +1,12 @@
+import os
+import uuid
+import asyncio
+import threading
+import jwt
 from fastapi import FastAPI, Request, Form, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.responses import RedirectResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import jwt
-import os
-import uuid
-import asyncio
 from database import init_db, leer, escribir, pwd_context
 
 SECRET_KEY = os.getenv("JWT_SECRET", "cambiar_esto_en_produccion")
@@ -31,6 +32,8 @@ async def startup_event():
     if MODO == "local":
         camara.iniciar()
         camara.cambiar_fuente(os.getenv("FUENTE_INICIAL", "webcam"))
+        from publicador_video import iniciar_publicacion
+        iniciar_publicacion(camara)
 
 @app.get("/")
 async def root():
@@ -274,3 +277,53 @@ async def api_upload(request: Request, archivo: UploadFile = File(...)):
 
     camara.cambiar_fuente(tipo, ruta)
     return {"ok": True, "tipo": tipo}
+@app.post("/api/control")
+async def api_control(request: Request):
+    await obtener_usuario_actual(request)
+    if camara is None:
+        raise HTTPException(status_code=503, detail="Control solo disponible en modo local")
+    datos = await request.json()
+    accion = datos.get("accion")
+    if accion == "pausa":
+        return {"ok": True, "pausado": camara.toggle_pausa()}
+    if accion == "parar":
+        camara.apagar()
+        return {"ok": True, "pausado": False}
+    raise HTTPException(status_code=400, detail="Acción no válida")
+# ---------- VIDEO EN VIVO PARA LA WEB (solo último cuadro, nada se guarda) ----------
+VIDEO_TOKEN = os.getenv("VIDEO_PUSH_TOKEN", "")
+_ultimo_frame = {"jpg": None, "id": 0}
+_frame_lock = threading.Lock()
+
+@app.post("/api/frame_push")
+async def frame_push(request: Request):
+    if not VIDEO_TOKEN or request.headers.get("X-Token") != VIDEO_TOKEN:
+        raise HTTPException(status_code=403, detail="Token inválido")
+    jpg = await request.body()
+    if not jpg or len(jpg) > 2_000_000:
+        raise HTTPException(status_code=400, detail="Frame inválido")
+    with _frame_lock:
+        _ultimo_frame["jpg"] = jpg
+        _ultimo_frame["id"] += 1
+    return {"ok": True}
+
+@app.get("/api/video_live")
+async def video_live(request: Request):
+    await obtener_usuario_actual(request)
+
+    async def generar():
+        ultimo = -1
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                with _frame_lock:
+                    jpg, fid = _ultimo_frame["jpg"], _ultimo_frame["id"]
+                if jpg and fid != ultimo:
+                    ultimo = fid
+                    yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n"
+                await asyncio.sleep(0.05)
+        except (ConnectionError, asyncio.CancelledError, GeneratorExit):
+            return
+
+    return StreamingResponse(generar(), media_type="multipart/x-mixed-replace; boundary=frame")

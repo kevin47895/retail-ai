@@ -66,6 +66,7 @@ def init_db_sync():
             conn.commit()
     finally:
         conn.close()
+
 def guardar_trafico():
     escribir("INSERT INTO eventos (tipo) VALUES ('trafico')")
 
@@ -73,6 +74,7 @@ def guardar_interaccion(producto: str):
     escribir("INSERT INTO eventos (tipo, detalle) VALUES ('interaccion', ?)", (producto,))
 
 def guardar_permanencia(segundos: float):
-    escribir("INSERT INTO eventos (tipo, valor) VALUES ('permanencia', ?)", (segundos,))      
+    escribir("INSERT INTO eventos (tipo, valor) VALUES ('permanencia', ?)", (segundos,))
+
 async def init_db():
     await asyncio.to_thread(init_db_sync)
