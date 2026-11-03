@@ -428,14 +428,15 @@ function activarCamaraManual() {
     const img = document.createElement("img");
     img.alt = "Stream de Cámara";
     img.style.cssText = "width:100%; height:auto; max-height:460px; object-fit:contain; display:block;";
-
+    
+    // Si la cámara web o el stream falla en la web, muestra el video de respaldo de inmediato
     img.onerror = () => {
         videoContainer.innerHTML = `
-            <video autoplay loop muted playsinline class="w-100 h-100" style="object-fit:cover; max-height:460px; opacity:0.8;">
+            <video autoplay loop muted playsinline class="w-100 h-100" style="object-fit:cover; max-height:460px; opacity:0.9;">
                 <source src="/static/demo_supermercado.mp4" type="video/mp4">
             </video>
             <div class="position-absolute top-0 end-0 m-3 px-2 py-1 bg-white text-dark border border-dark small fw-bold shadow-sm">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i> Señal no disponible. Reproduciendo video de respaldo.
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> Cámara no conectada. Reproduciendo video de demostración.
             </div>
         `;
     };
@@ -443,6 +444,12 @@ function activarCamaraManual() {
     videoContainer.appendChild(img);
     img.src = VIDEO_URL + "?source=" + fuenteElegida + "&t=" + Date.now();
 }
+
+// Opcional: Si quieres que el video de respaldo cargue automáticamente al abrir la página web
+window.addEventListener('DOMContentLoaded', () => {
+    // Si prefieres que cargue el demo directo al entrar, descomenta la siguiente línea:
+    // activarCamaraManual();
+});
 
 async function subirArchivoLocal() {
     const input = document.getElementById("archivo-input");
