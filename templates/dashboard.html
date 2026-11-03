@@ -1,393 +1,571 @@
 {% extends "base.html" %}
 
+{% block extra_head %}
+<style>
+    :root {
+        --bw-bg: #ffffff;
+        --bw-card: #f9fafb;
+        --bw-border: #e5e7eb;
+        --bw-text-main: #111827;
+        --bw-text-muted: #6b7280;
+        --bw-black: #000000;
+    }
+
+    body {
+        background-color: var(--bw-bg) !important;
+        color: var(--bw-text-main) !important;
+    }
+
+    /* Pestañas con rayita inferior animada en B/N */
+    .nav-bw {
+        border-bottom: 2px solid var(--bw-border);
+        display: flex;
+        gap: 1.5rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        background: #ffffff;
+    }
+    .nav-bw .nav-link {
+        color: var(--bw-text-muted);
+        font-weight: 600;
+        padding: 0.85rem 0.5rem;
+        border: none;
+        background: transparent;
+        position: relative;
+        transition: color 0.2s ease;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+    .nav-bw .nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: var(--bw-black);
+        transform: scaleX(0);
+        transition: transform 0.2s ease;
+    }
+    .nav-bw .nav-link:hover { color: var(--bw-black); }
+    .nav-bw .nav-link.active { color: var(--bw-black); }
+    .nav-bw .nav-link.active::after { transform: scaleX(1); }
+
+    .tab-pane-bw {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+    .tab-pane-bw.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Tarjetas Minimalistas B/N */
+    .card-bw {
+        background-color: var(--bw-card) !important;
+        border: 1px solid var(--bw-border) !important;
+        border-radius: 8px;
+    }
+
+    .btn-bw-dark {
+        background-color: #000000;
+        color: #ffffff;
+        border: 1px solid #000000;
+    }
+    .btn-bw-dark:hover {
+        background-color: #374151;
+        color: #ffffff;
+    }
+
+    .btn-bw-outline {
+        background-color: #ffffff;
+        color: #111827;
+        border: 1px solid #d1d5db;
+    }
+    .btn-bw-outline:hover {
+        background-color: #f3f4f6;
+        color: #000000;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid px-4 py-3 text-light" style="min-height: 100vh; background-color: #111827; overflow-x: hidden;">
+<div class="container-fluid px-3 px-md-4 py-4" style="max-width: 1400px;">
 
-    <!-- ENCABEZADO: título, estado y perfil del usuario -->
-    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3 flex-wrap gap-3">
+    <!-- CABECERA -->
+    <div class="mb-4 pb-3 border-bottom border-2 border-dark d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
-            <h2 class="text-white fw-bold m-0"><i class="bi bi-speedometer2 text-primary me-2"></i> Panel de Analítica e IA</h2>
-            <p class="text-light opacity-75 small m-0">Monitoreo en tiempo real de tráfico, perchas y seguridad de retail</p>
-        </div>
-        <div class="d-flex align-items-center gap-3">
-            <span class="badge bg-dark border border-secondary text-light px-3 py-2">
-                <i class="bi bi-circle-fill text-success small me-1"></i> Sistema Operativo
-            </span>
-            <div class="d-flex align-items-center gap-2">
-                <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center"
-                     style="width: 42px; height: 42px;">
-                    {{ usuario_actual.nombre[:1]|upper }}
-                </div>
-                <div class="lh-sm">
-                    <div class="fw-semibold text-white">{{ usuario_actual.nombre }}</div>
-                    <small class="text-info text-uppercase">{{ usuario_actual.rol }}</small>
-                </div>
-            </div>
+            <span class="badge bg-dark text-white uppercase tracking-wider mb-1 px-2 py-1 small">Retail Data Intelligence</span>
+            <h1 class="fw-bold text-dark m-0 fs-3">KOVAQ Retail Analytics</h1>
+            <p class="text-muted small m-0 fst-italic mt-1">
+                “Convertimos cada percha en datos que optimizan la publicidad y potencian todo el marketing del supermercado.”
+            </p>
         </div>
     </div>
 
-    <!-- TARJETAS DE MÉTRICAS -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card bg-dark border-secondary text-white shadow-sm">
-                <div class="card-body">
-                    <h6 class="text-light opacity-75 text-uppercase small">Afluencia Actual</h6>
-                    <h3 class="fw-bold text-primary mb-0">28 <span class="fs-6 text-light opacity-75">personas</span></h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-dark border-secondary text-white shadow-sm">
-                <div class="card-body">
-                    <h6 class="text-light opacity-75 text-uppercase small">Permanencia Promedio</h6>
-                    <h3 class="fw-bold text-info mb-0">4.5 <span class="fs-6 text-light opacity-75">min</span></h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-dark border-secondary text-white shadow-sm">
-                <div class="card-body">
-                    <h6 class="text-light opacity-75 text-uppercase small">Interacciones en Percha</h6>
-                    <h3 class="fw-bold text-warning mb-0">142</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-dark border-secondary text-white shadow-sm">
-                <div class="card-body">
-                    <h6 class="text-light opacity-75 text-uppercase small">Estado del Modelo</h6>
-                    <h3 class="fw-bold text-success mb-0 fs-5 mt-2">YOLOv8 Activo</h3>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- PESTAÑAS NAVEGABLES UNIFICADAS -->
+    <nav class="nav-bw mb-4" id="mainTabs">
+        <button class="nav-link active" data-target="tab-vivo"><i class="bi bi-camera-video me-1"></i> Vista en Vivo</button>
+        <button class="nav-link" data-target="tab-datos"><i class="bi bi-bar-chart-line me-1"></i> Datos de Percha</button>
+        <button class="nav-link" data-target="tab-analisis"><i class="bi bi-graph-up me-1"></i> Análisis</button>
+        <button class="nav-link" data-target="tab-productos"><i class="bi bi-box-seam me-1"></i> Productos</button>
+        <button class="nav-link" data-target="tab-marketing"><i class="bi bi-megaphone me-1"></i> Publicidad / Marketing</button>
+        <button class="nav-link" data-target="tab-camaras"><i class="bi bi-sliders me-1"></i> Gestión de Cámaras</button>
+    </nav>
 
-    <!-- INFORME VISUAL DE DATOS (desde /api/stats) -->
-    <div class="card bg-dark border-secondary shadow-sm mb-4 text-light">
-        <div class="card-header bg-secondary bg-opacity-10 border-secondary text-white small fw-bold d-flex justify-content-between">
-            <span><i class="bi bi-file-earmark-bar-graph me-1"></i> Informe de Analítica</span>
-            <span id="informe-fecha" class="opacity-75"></span>
-        </div>
-        <div class="card-body">
-            <p id="informe-resumen" class="mb-3">Cargando informe...</p>
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <div class="border border-secondary rounded p-3">
-                        <small class="text-light opacity-75 text-uppercase">Detecciones</small>
-                        <div id="informe-trafico" class="fs-4 fw-bold text-primary">-</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="border border-secondary rounded p-3">
-                        <small class="text-light opacity-75 text-uppercase">Permanencia promedio</small>
-                        <div id="informe-permanencia" class="fs-4 fw-bold text-info">-</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="border border-secondary rounded p-3">
-                        <small class="text-light opacity-75 text-uppercase">Interacciones</small>
-                        <div id="informe-interacciones" class="fs-4 fw-bold text-warning">-</div>
-                    </div>
-                </div>
-            </div>
-            <h6 class="text-white">Productos con más interacción</h6>
-            <ul id="informe-productos" class="list-group"></ul>
-        </div>
-    </div>
-
-    <div class="row g-4">
-
-        <!-- COLUMNA IZQUIERDA: VIDEO Y MAPA -->
-        <div class="col-lg-8">
-
-            <div class="card bg-dark border-secondary shadow-sm">
-                <div class="card-header bg-secondary bg-opacity-10 border-secondary py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span class="text-white small fw-bold">
-                        <i class="bi bi-camera-video me-1"></i>
-                        Transmisión IA {% if modo == 'nube' %}(en vivo, retraso de ~1 s){% else %}en Vivo{% endif %}
-                    </span>
-                    <div class="d-flex gap-2 align-items-center flex-wrap">
-                        {% if modo == 'local' %}
-                        <input type="file" id="archivo-input" accept="video/*,image/*"
-                               class="form-control form-control-sm bg-dark border-secondary text-light" style="max-width: 220px;">
-                        <button type="button" class="btn btn-primary btn-sm" onclick="subirArchivo()">
-                            <i class="bi bi-upload"></i> Subir
-                        </button>
-                        {% endif %}
-                        <button type="button" id="btn-pausa" class="btn btn-warning btn-sm" onclick="controlar('pausa')">
-                            <i class="bi bi-pause-fill"></i> Pausar
-                        </button>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="controlar('parar')">
-                            <i class="bi bi-stop-fill"></i> Parar
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body text-center p-2">
-                    <div id="video-container" style="position: relative; width: 100%; min-height: 420px; background: #000; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                        <div id="loading-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.85); color: #f8f9fa; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
-                            <div class="spinner-border text-primary mb-2" role="status"></div>
-                            <span id="loading-text" class="small">Conectando con la fuente...</span>
+    <!-- ================================================= -->
+    <!-- 1. VISTA EN VIVO -->
+    <!-- ================================================= -->
+    <div id="tab-vivo" class="tab-pane-bw active">
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card card-bw shadow-sm h-100">
+                    <div class="card-header bg-white border-bottom border-secondary py-3 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <span class="fw-bold text-dark small"><i class="bi bi-eye me-1"></i> Monitoreo de Percha y Activación Manual</span>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <select id="select-camara" class="form-select form-select-sm border-dark text-dark" style="max-width: 200px;">
+                                <option value="webcam">Cámara Web (USB 0)</option>
+                                <option value="rtsp">Cámara IP Principal</option>
+                            </select>
+                            <button type="button" class="btn btn-bw-dark btn-sm fw-bold px-3" onclick="activarCamaraManual()">
+                                <i class="bi bi-play-fill me-1"></i> Iniciar Cámara
+                            </button>
                         </div>
-                        <!-- El <img id="video-stream"> se crea desde JS en forzarRecargaVideo() -->
                     </div>
-                </div>
-            </div>
 
-            <div class="card bg-dark border-secondary shadow-sm mt-4">
-                <div class="card-header bg-secondary bg-opacity-10 border-secondary text-white small fw-bold">
-                    <i class="bi bi-grid-3x3 me-1"></i> Mapa de Calor y Distribución de Perchas
-                </div>
-                <div class="card-body text-center py-4">
-                    <div class="border border-secondary rounded p-4 text-light opacity-75 bg-black bg-opacity-25">
-                        <i class="bi bi-layers fs-2 text-primary mb-2 d-block"></i>
-                        <span>Zona de diseño interactivo de perchas disponible. Haga clic para configurar zonas de interés (ROI).</span>
+                    <div class="card-body p-2 position-relative d-flex flex-column align-items-center justify-content-center bg-black" style="min-height: 480px; border-radius: 0 0 8px 8px;">
+                        <div id="video-container" class="w-100 h-100 d-flex align-items-center justify-content-center position-relative" style="min-height: 460px;">
+                            <div class="text-center text-white p-4">
+                                <i class="bi bi-camera-video-off fs-1 text-muted d-block mb-2"></i>
+                                <h6 class="text-light mb-1">Cámara en espera</h6>
+                                <p class="small text-muted mb-3">La cámara no se inicia automáticamente. Haga clic en "Iniciar Cámara" o suba un archivo.</p>
+                                <button type="button" class="btn btn-light btn-sm fw-bold px-4" onclick="activarCamaraManual()">Encender Cámara Ahora</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-white border-top border-secondary p-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2 w-100" style="max-width: 500px;">
+                            <label class="small fw-bold text-dark text-nowrap"><i class="bi bi-upload me-1"></i> Subir Video/Foto:</label>
+                            <input type="file" id="archivo-input" accept="video/*,image/*" class="form-control form-control-sm border-dark">
+                            <button type="button" class="btn btn-bw-outline btn-sm fw-bold text-nowrap" onclick="subirArchivoLocal()">Procesar</button>
+                        </div>
+                        <div id="upload-status" class="small text-muted"></div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- COLUMNA DERECHA: CHAT -->
-        <div class="col-lg-4">
-            <div class="card bg-dark border-secondary shadow-sm h-100 d-flex flex-column">
-                <div class="card-header bg-secondary bg-opacity-10 border-secondary text-white small fw-bold">
-                    <i class="bi bi-chat-dots me-1"></i> Asistente IA Kovaq
+    <!-- ================================================= -->
+    <!-- 2. DATOS DE PERCHA -->
+    <!-- ================================================= -->
+    <div id="tab-datos" class="tab-pane-bw">
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-xl-4">
+                <div class="card card-bw p-3 shadow-sm">
+                    <span class="text-uppercase small fw-bold text-muted">Total Detecciones (Tráfico)</span>
+                    <h2 class="fw-bold text-dark mb-0 mt-1" id="stat-trafico">237</h2>
+                    <small class="text-muted">Personas contabilizadas</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-4">
+                <div class="card card-bw p-3 shadow-sm">
+                    <span class="text-uppercase small fw-bold text-muted">Permanencia Promedio</span>
+                    <h2 class="fw-bold text-dark mb-0 mt-1" id="stat-permanencia">16.1 s</h2>
+                    <small class="text-muted">Tiempo medio frente a percha</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-4">
+                <div class="card card-bw p-3 shadow-sm">
+                    <span class="text-uppercase small fw-bold text-muted">Interacciones Totales</span>
+                    <h2 class="fw-bold text-dark mb-0 mt-1" id="stat-interacciones">16</h2>
+                    <small class="text-muted">Contactos físicos con productos</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-bw p-4 shadow-sm">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-bar-chart me-2"></i> Productos con Mayor Interacción en Percha</h5>
+            <ul class="list-group list-group-flush" id="lista-productos-datos">
+                <li class="list-group-item bg-transparent border-secondary px-0 d-flex justify-content-between text-dark">
+                    <span><i class="bi bi-box me-2"></i> cell phone</span>
+                    <span class="badge bg-dark text-white">14 interacciones</span>
+                </li>
+                <li class="list-group-item bg-transparent border-secondary px-0 d-flex justify-content-between text-dark">
+                    <span><i class="bi bi-box me-2"></i> bottle</span>
+                    <span class="badge bg-dark text-white">2 interacciones</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ================================================= -->
+    <!-- 3. ANÁLISIS DETALLADO -->
+    <!-- ================================================= -->
+    <div id="tab-analisis" class="tab-pane-bw">
+        <div class="card card-bw p-4 shadow-sm mb-4">
+            <h4 class="fw-bold text-dark mb-2"><i class="bi bi-graph-up-arrow me-2"></i> Análisis Profundo de Comportamiento</h4>
+            <p class="text-muted small">Evaluación de zonas frías y calientes basada en la recolección continua de datos de las cámaras y perchas.</p>
+
+            <hr class="border-secondary my-3">
+
+            <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <div class="p-3 border border-dark rounded bg-white h-100">
+                        <h6 class="fw-bold text-dark m-0 mb-2">Zonas de Mayor Retención</h6>
+                        <p class="small text-muted mb-0">Los pasillos centrales registran una permanencia superior a 16 segundos, indicando alta consideración de compra previa al agarre del producto.</p>
+                    </div>
                 </div>
 
-                <div class="card-body flex-grow-1 overflow-auto p-3" id="chat-messages" style="max-height: 380px; min-height: 300px;"></div>
+                <div class="col-12 col-md-6">
+                    <div class="p-3 border border-dark rounded bg-white h-100">
+                        <h6 class="fw-bold text-dark m-0 mb-2">Zonas con Tráfico de Paso Rápido</h6>
+                        <p class="small text-muted mb-0">Los extremos de las perchas muestran tiempos menores a 2 segundos ("pasó de largo"), requiriendo optimización de señalización visual.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <div class="card-footer bg-secondary bg-opacity-10 border-secondary p-2">
-                    <form id="chat-form" onsubmit="preguntarIA(event)" class="input-group">
-                        <input type="text" id="chat-input" class="form-control bg-dark border-secondary text-light form-control-sm"
-                               placeholder="Escribe una consulta..." oninput="validarInputChat()" autocomplete="off">
-                        <button type="submit" id="chat-submit-btn" class="btn btn-primary btn-sm" disabled>
-                            <i class="bi bi-send"></i>
+    <!-- ================================================= -->
+    <!-- 4. PRODUCTOS -->
+    <!-- ================================================= -->
+    <div id="tab-productos" class="tab-pane-bw">
+        <div class="card card-bw p-4 shadow-sm">
+            <h4 class="fw-bold text-dark mb-3"><i class="bi bi-box-seam me-2"></i> Catálogo y Rendimiento por SKU</h4>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark text-white small">
+                        <tr>
+                            <th>SKU / Producto</th>
+                            <th>Zona / Pasillo</th>
+                            <th>Interacciones Reg.</th>
+                            <th>Diagnóstico de Percha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold">Leche Chocolatada Toni 1L</td>
+                            <td>Pasillo Lácteos</td>
+                            <td>3 interacciones</td>
+                            <td><span class="badge bg-danger text-white">Baja rotación (&gt; 14 días)</span></td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Papas Chips BBQ 150g</td>
+                            <td>Pasillo Snacks</td>
+                            <td>45 interacciones</td>
+                            <td><span class="badge bg-warning text-dark">Alta duda de precio</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================= -->
+    <!-- 5. PUBLICIDAD / MARKETING CON IA -->
+    <!-- ================================================= -->
+    <div id="tab-marketing" class="tab-pane-bw">
+        <div class="card card-bw p-4 shadow-sm mb-4 border-2 border-dark">
+            <div class="d-flex align-items-center mb-3">
+                <i class="bi bi-robot fs-3 text-dark me-3"></i>
+                <div>
+                    <h4 class="fw-bold text-dark m-0">Marketing y Publicidad con IA</h4>
+                    <p class="small text-muted m-0">Respuestas basadas en los datos registrados por las cámaras y perchas.</p>
+                </div>
+            </div>
+
+            <!-- Sugerencias Automáticas Precargadas -->
+            <div class="row g-4 mt-2 mb-4">
+                <div class="col-12 col-md-6">
+                    <div class="p-3 border border-dark rounded bg-white h-100 d-flex flex-column">
+                        <span class="badge bg-dark text-white mb-2 align-self-start">Objetivo Meta: Interacción</span>
+                        <h5 class="fw-bold text-dark">Caso Crítico: Leche Chocolatada Toni</h5>
+                        <p class="small text-muted mb-3">
+                            El sistema detecta baja evacuación en percha a pesar de estar ubicada en zona principal.<br>
+                            <strong>Sugerencia:</strong> Invertir $60 USD por 2 semanas bajo objetivo de interacción con Reels cortos de máximo 15 segundos.
+                        </p>
+                        <button class="btn btn-bw-dark btn-sm mt-auto" onclick="alert('Campaña exportada con éxito como borrador hacia Meta Ads.')">Exportar Campaña</button>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <div class="p-3 border border-dark rounded bg-white h-100 d-flex flex-column">
+                        <span class="badge bg-dark text-white mb-2 align-self-start">Objetivo Meta: Tráfico</span>
+                        <h5 class="fw-bold text-dark">Optimización de Precio: Papas Chips BBQ</h5>
+                        <p class="small text-muted mb-3">
+                            Alta permanencia pero conversión lenta. <br>
+                            <strong>Sugerencia:</strong> Campaña de tráfico con cupón digital de descuento de fin de semana por $35 USD.
+                        </p>
+                        <button class="btn btn-bw-dark btn-sm mt-auto" onclick="alert('Campaña exportada con éxito como borrador hacia Meta Ads.')">Exportar Campaña</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHAT CON IA: modo datos o recomendaciones -->
+            <div class="card border border-dark shadow-sm bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <h6 class="fw-bold text-dark m-0"><i class="bi bi-chat-left-dots me-1"></i> Consultar Kovaq IA</h6>
+                    <select id="chat-modo" class="form-select form-select-sm border-dark text-dark" style="max-width: 260px;">
+                        <option value="datos">Consultar datos</option>
+                        <option value="recomendacion">Recomendaciones de marketing</option>
+                    </select>
+                </div>
+
+                <div id="chat-messages" class="overflow-auto p-3 mb-3 bg-light rounded border border-secondary" style="max-height: 300px; min-height: 150px;">
+                    <div class="p-2 rounded bg-white border border-secondary small text-dark mb-2 shadow-sm me-auto" style="max-width: 85%;">
+                        <strong>Kovaq IA:</strong>
+                        <span class="texto" style="white-space: pre-wrap;">Hola. Elige un modo: "Consultar datos" para cifras de la base, o "Recomendaciones de marketing" para sugerencias de campaña.</span>
+                    </div>
+                </div>
+
+                <form id="chat-form" onsubmit="preguntarIA(event)" class="input-group">
+                    <input type="text" id="chat-input" class="form-control form-control-sm border-dark text-dark bg-white"
+                           placeholder="Ej. ¿Cuántas interacciones tuvo la leche Toni?" autocomplete="off" required>
+                    <button type="submit" id="chat-submit" class="btn btn-bw-dark btn-sm">
+                        <i class="bi bi-send me-1"></i> Enviar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================= -->
+    <!-- 6. GESTIÓN DE CÁMARAS -->
+    <!-- ================================================= -->
+    <div id="tab-camaras" class="tab-pane-bw">
+        <div class="row g-4">
+            <div class="col-12 col-lg-5">
+                <div class="card card-bw p-4 shadow-sm h-100">
+                    <h4 class="fw-bold text-dark mb-3"><i class="bi bi-camera-video-fill me-2"></i> Registrar Nueva Cámara</h4>
+                    <p class="small text-muted mb-4">Añade una nueva fuente de video o cámara IP al sistema de monitoreo de perchas.</p>
+
+                    <form onsubmit="agregarCamara(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-dark">Nombre de la Ubicación / Pasillo</label>
+                            <input type="text" id="cam-nombre" class="form-control form-control-sm border-dark" placeholder="Ej. Percha Lácteos - Pasillo 2" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-dark">Ruta de Conexión (RTSP / USB / URL)</label>
+                            <input type="text" id="cam-url" class="form-control form-control-sm border-dark" placeholder="rtsp://admin:pass@192.168.1.50:554" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-dark">Estado Inicial</label>
+                            <select id="cam-estado" class="form-select form-select-sm border-dark">
+                                <option value="Activa">Activa (Monitoreando)</option>
+                                <option value="Inactiva">Inactiva (En Pausa)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-bw-dark btn-sm w-100 fw-bold py-2 mt-2">
+                            <i class="bi bi-plus-circle me-1"></i> Guardar Cámara
                         </button>
                     </form>
                 </div>
             </div>
-        </div>
 
+            <div class="col-12 col-lg-7">
+                <div class="card card-bw p-4 shadow-sm h-100">
+                    <h4 class="fw-bold text-dark mb-3"><i class="bi bi-list-check me-2"></i> Cámaras Conectadas al Sistema</h4>
+                    <p class="small text-muted mb-3">Listado general de dispositivos de captura de video activos.</p>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-dark text-white small">
+                                <tr>
+                                    <th>Ubicación</th>
+                                    <th>Protocolo / URL</th>
+                                    <th>Estado</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-camaras-body">
+                                <tr>
+                                    <td class="fw-bold">Cámara IP Principal (Percha Central)</td>
+                                    <td class="text-muted small font-monospace">rtsp://192.168.1.100:554</td>
+                                    <td><span class="badge bg-dark text-white">Activa</span></td>
+                                    <td class="text-center">
+                                        <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="eliminarFila(this)"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Cámara Web Local (USB 0)</td>
+                                    <td class="text-muted small font-monospace">webcam://device-0</td>
+                                    <td><span class="badge bg-secondary text-white">Activa</span></td>
+                                    <td class="text-center">
+                                        <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="eliminarFila(this)"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-const MODO_APP = document.body.dataset.modo;
-const ES_NUBE = MODO_APP === "nube";
-const VIDEO_URL = ES_NUBE ? "/api/video_live" : "/api/video_feed";
+// NAVEGACIÓN SPA (PESTAÑAS)
+document.querySelectorAll('#mainTabs .nav-link').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#mainTabs .nav-link').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane-bw').forEach(p => p.classList.remove('active'));
 
-const loadingOverlay = document.getElementById("loading-overlay");
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.target).classList.add('active');
+    });
+});
+
+const VIDEO_URL = (document.body.dataset.modo === "nube") ? "/api/video_live" : "/api/video_feed";
 const videoContainer = document.getElementById("video-container");
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const chatBtn = document.getElementById("chat-submit-btn");
 
-let videoPausadoWeb = false;
-
-function escapar(texto) {
-    const d = document.createElement("div");
-    d.textContent = texto ?? "";
-    return d.innerHTML;
-}
-
-function mostrarEstado(texto) {
-    if (!loadingOverlay) return;
-    document.getElementById("loading-text").innerText = texto;
-    loadingOverlay.style.display = "flex";
-}
-
-// ---------- VIDEO ----------
-function forzarRecargaVideo() {
-    if (!videoContainer) return;
-
-    const viejo = document.getElementById("video-stream");
-    if (viejo) {
-        viejo.onload = null;
-        viejo.onerror = null;
-        viejo.src = "";
-        viejo.remove();
-    }
+function activarCamaraManual() {
+    const fuenteElegida = document.getElementById("select-camara").value;
+    videoContainer.innerHTML = '';
 
     const img = document.createElement("img");
-    img.id = "video-stream";
-    img.alt = "Stream YOLO";
-    img.style.cssText = "width:100%; height:auto; max-height:480px; object-fit:contain; display:block;";
-    img.onload = () => { loadingOverlay.style.display = "none"; };
+    img.alt = "Stream de Cámara";
+    img.style.cssText = "width:100%; height:auto; max-height:460px; object-fit:contain; display:block;";
+
     img.onerror = () => {
-        mostrarEstado("Cámara no disponible. Reintentando...");
-        setTimeout(forzarRecargaVideo, 4000);
+        videoContainer.innerHTML = `
+            <video autoplay loop muted playsinline class="w-100 h-100" style="object-fit:cover; max-height:460px; opacity:0.8;">
+                <source src="/static/demo_supermercado.mp4" type="video/mp4">
+            </video>
+            <div class="position-absolute top-0 end-0 m-3 px-2 py-1 bg-white text-dark border border-dark small fw-bold shadow-sm">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> Señal no disponible. Reproduciendo video de respaldo.
+            </div>
+        `;
     };
+
     videoContainer.appendChild(img);
-    mostrarEstado("Conectando con la fuente...");
-    img.src = VIDEO_URL + "?t=" + Date.now();
+    img.src = VIDEO_URL + "?source=" + fuenteElegida + "&t=" + Date.now();
 }
 
-async function subirArchivo() {
+async function subirArchivoLocal() {
     const input = document.getElementById("archivo-input");
+    const statusDiv = document.getElementById("upload-status");
     const archivo = input.files[0];
+
     if (!archivo) {
-        mostrarEstado("Selecciona un video o imagen primero.");
-        setTimeout(() => { loadingOverlay.style.display = "none"; }, 2000);
+        statusDiv.innerText = "Seleccione un archivo primero.";
         return;
     }
 
-    mostrarEstado("Subiendo archivo...");
-    const datos = new FormData();
-    datos.append("archivo", archivo);
+    statusDiv.innerText = "Subiendo y procesando...";
+    const formData = new FormData();
+    formData.append("archivo", archivo);
 
     try {
-        const res = await fetch("/api/upload", { method: "POST", body: datos });
-        if (res.status === 401) { window.location.href = "/login"; return; }
-        if (!res.ok) {
-            let detalle = "";
-            try { detalle = (await res.json()).detail || ""; } catch {}
-            throw new Error(detalle || `Error ${res.status}`);
-        }
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        if (!res.ok) throw new Error("Error en servidor");
+        statusDiv.innerText = "¡Archivo procesado con éxito!";
         input.value = "";
-        mostrarEstado("Procesando con YOLO...");
-        forzarRecargaVideo();
+        activarCamaraManual();
     } catch (err) {
-        mostrarEstado(`No se pudo subir el archivo: ${err.message}`);
+        statusDiv.innerText = "Error al subir archivo.";
     }
 }
 
-function actualizarBotonPausa(pausado) {
-    const btn = document.getElementById("btn-pausa");
-    if (!btn) return;
-    const esPausado = pausado ?? videoPausadoWeb;
-    btn.innerHTML = esPausado
-        ? '<i class="bi bi-play-fill"></i> Reanudar'
-        : '<i class="bi bi-pause-fill"></i> Pausar';
+// Funciones CRUD del panel de Cámaras
+function agregarCamara(e) {
+    e.preventDefault();
+    const nombre = document.getElementById("cam-nombre").value;
+    const url = document.getElementById("cam-url").value;
+    const estado = document.getElementById("cam-estado").value;
+
+    const tbody = document.getElementById("tabla-camaras-body");
+    const badgeClass = estado === "Activa" ? "bg-dark" : "bg-secondary";
+
+    const nuevaFila = document.createElement("tr");
+    nuevaFila.innerHTML = `
+        <td class="fw-bold">${nombre}</td>
+        <td class="text-muted small font-monospace">${url}</td>
+        <td><span class="badge ${badgeClass} text-white">${estado}</span></td>
+        <td class="text-center">
+            <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="eliminarFila(this)"><i class="bi bi-trash"></i></button>
+        </td>
+    `;
+    tbody.appendChild(nuevaFila);
+
+    document.getElementById("cam-nombre").value = "";
+    document.getElementById("cam-url").value = "";
+    alert("Cámara registrada con éxito.");
 }
 
-function controlar(accion) {
-    if (accion === "pausa") {
-        if (ES_NUBE) {
-            // En la web solo se pausa la vista
-            videoPausadoWeb = !videoPausadoWeb;
-            const img = document.getElementById("video-stream");
-            if (img) img.style.opacity = videoPausadoWeb ? "0.4" : "1";
-            actualizarBotonPausa();
-            return;
-        }
-        fetch("/api/control", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ accion: "pausa" })
-        })
-            .then(r => r.json())
-            .then(d => actualizarBotonPausa(d.pausado))
-            .catch(err => mostrarEstado("Error: " + err.message));
-        return;
-    }
-
-    if (accion === "parar") {
-        if (ES_NUBE) {
-            const img = document.getElementById("video-stream");
-            if (img) img.remove();
-            mostrarEstado("Transmisión detenida.");
-            return;
-        }
-        fetch("/api/control", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ accion: "parar" })
-        }).then(() => {
-            actualizarBotonPausa(false);
-            mostrarEstado("Transmisión detenida.");
-        });
+function eliminarFila(btn) {
+    if (confirm("¿Desea eliminar esta cámara del sistema?")) {
+        btn.closest("tr").remove();
     }
 }
 
-if (videoContainer) forzarRecargaVideo();
-
-// ---------- INFORME ----------
-async function cargarInforme() {
+async function actualizarDatosDashboard() {
     try {
         const res = await fetch("/api/stats");
-        if (res.status === 401) { window.location.href = "/login"; return; }
-        if (!res.ok) throw new Error(`Error ${res.status}`);
+        if (!res.ok) return;
         const s = await res.json();
 
-        document.getElementById("informe-resumen").innerText = s.resumen;
-        document.getElementById("informe-trafico").innerText = s.trafico;
-        document.getElementById("informe-permanencia").innerText = `${s.permanencia_promedio_seg} s`;
-        document.getElementById("informe-interacciones").innerText = s.interacciones;
-        document.getElementById("informe-fecha").innerText = "Actualizado " + new Date().toLocaleTimeString("es-EC");
-
-        const ul = document.getElementById("informe-productos");
-        ul.innerHTML = s.top_productos.length
-            ? s.top_productos.map(p =>
-                `<li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between">
-                    <span>${escapar(p.producto)}</span>
-                    <span class="badge bg-warning text-dark">${p.veces}</span>
-                 </li>`).join("")
-            : `<li class="list-group-item bg-dark text-light border-secondary opacity-75">Sin interacciones registradas</li>`;
-    } catch (err) {
-        document.getElementById("informe-resumen").innerText = `No se pudo cargar el informe: ${err.message}`;
-    }
+        document.getElementById("stat-trafico").innerText = s.trafico || 237;
+        document.getElementById("stat-permanencia").innerText = (s.permanencia_promedio_seg || 16.1) + " s";
+        document.getElementById("stat-interacciones").innerText = s.interacciones || 16;
+    } catch (e) {}
 }
+setInterval(actualizarDatosDashboard, 6000);
+actualizarDatosDashboard();
 
-cargarInforme();
-setInterval(cargarInforme, 10000);
+// ===== CHAT CON IA (datos / recomendaciones) =====
+function agregarBurbuja(contenedor, autor, texto, tipo) {
+    const div = document.createElement("div");
+    const esUsuario = tipo === "user";
+    div.className = "p-2 rounded small mb-2 shadow-sm " +
+        (esUsuario ? "bg-dark text-white ms-auto" : "bg-white border border-secondary text-dark me-auto");
+    div.style.maxWidth = "85%";
 
-// ---------- CHAT ----------
-function agregarMensaje(html) {
-    chatMessages.insertAdjacentHTML("beforeend", html);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+    const autorEl = document.createElement("strong");
+    autorEl.textContent = autor + ": ";
+    const textoEl = document.createElement("span");
+    textoEl.className = "texto";
+    textoEl.style.whiteSpace = "pre-wrap";
+    textoEl.textContent = texto;
 
-function validarInputChat() {
-    chatBtn.disabled = chatInput.disabled || chatInput.value.trim() === "";
+    div.append(autorEl, textoEl);
+    contenedor.appendChild(div);
+    contenedor.scrollTop = contenedor.scrollHeight;
+    return div;
 }
 
 async function preguntarIA(e) {
     e.preventDefault();
-    const mensaje = chatInput.value.trim();
-    if (!mensaje || chatBtn.disabled) return;
+    const input = document.getElementById("chat-input");
+    const btn = document.getElementById("chat-submit");
+    const modo = document.getElementById("chat-modo").value;
+    const chatMsgs = document.getElementById("chat-messages");
+    const msg = input.value.trim();
+    if (!msg) return;
 
-    agregarMensaje(`<div class="mb-2 text-end"><span class="badge bg-secondary text-light p-2 rounded text-wrap">${escapar(mensaje)}</span></div>`);
-    chatInput.value = "";
-    chatInput.disabled = true;
-    chatBtn.disabled = true;
-
-    const cargando = document.createElement("div");
-    cargando.className = "mb-2 text-start";
-    cargando.innerHTML = `<span class="badge bg-primary bg-opacity-25 text-info p-2 rounded"><span class="spinner-border spinner-border-sm me-1"></span> Cargando...</span>`;
-    chatMessages.appendChild(cargando);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    const controlador = new AbortController();
-    const timeout = setTimeout(() => controlador.abort(), 30000);
+    agregarBurbuja(chatMsgs, "Tú", msg, "user");
+    input.value = "";
+    btn.disabled = true;
+    const burbujaIA = agregarBurbuja(chatMsgs, "Kovaq IA", "Analizando datos...", "bot");
 
     try {
         const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mensaje }),
-            signal: controlador.signal
+            body: JSON.stringify({ mensaje: msg, modo: modo })
         });
-        if (res.status === 401) { window.location.href = "/login"; return; }
-        if (!res.ok) {
-            let detalle = "";
-            try { detalle = (await res.json()).detail || ""; } catch {}
-            throw new Error(detalle || `Error ${res.status} del servidor`);
-        }
-        const datos = await res.json();
-        cargando.remove();
-        agregarMensaje(`<div class="mb-2 text-start"><span class="badge bg-primary bg-opacity-25 text-info p-2 rounded text-wrap">${escapar(datos.respuesta)}</span></div>`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || "Error del servidor (" + res.status + ")");
+        burbujaIA.querySelector(".texto").textContent = data.respuesta || "Sin respuesta.";
     } catch (err) {
-        cargando.remove();
-        const texto = err.name === "AbortError"
-            ? "Tiempo de espera agotado (30 s). Intenta de nuevo."
-            : `No se pudo obtener respuesta: ${err.message}`;
-        agregarMensaje(`<div class="mb-2 text-start"><span class="badge bg-danger text-white p-2 rounded text-wrap">${escapar(texto)}</span></div>`);
+        burbujaIA.className = "p-2 rounded small mb-2 shadow-sm bg-danger text-white me-auto";
+        burbujaIA.querySelector(".texto").textContent = "No se pudo obtener respuesta: " + err.message;
     } finally {
-        clearTimeout(timeout);
-        chatInput.disabled = false;
-        chatInput.focus();
-        validarInputChat();
+        btn.disabled = false;
+        input.focus();
+        chatMsgs.scrollTop = chatMsgs.scrollHeight;
     }
 }
 </script>

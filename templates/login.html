@@ -7,53 +7,121 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .login-card { max-width: 400px; width: 100%; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); background: #fff; }
+        :root {
+            /* Mismas variables claras del dashboard */
+            --bw-bg: #ffffff;
+            --bw-card: #f9fafb;
+            --bw-border: #e5e7eb;
+            --bw-text-main: #111827;
+            --bw-text-muted: #6b7280;
+            --bw-black: #000000;
+        }
+
+        body { 
+            background-color: var(--bw-bg); 
+            color: var(--bw-text-main);
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+        }
+        
+        .login-card { 
+            max-width: 400px; 
+            width: 100%; 
+            padding: 32px; 
+            border-radius: 12px; 
+            background-color: var(--bw-card); 
+            border: 1px solid var(--bw-border);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-control, .input-group-text, .btn-outline-secondary {
+            background-color: #ffffff !important;
+            border-color: var(--bw-border) !important;
+            color: var(--bw-text-main) !important;
+        }
+
+        .form-control:focus {
+            border-color: var(--bw-black) !important;
+            box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-control::placeholder {
+            color: var(--bw-text-muted) !important;
+        }
+
+        .text-secondary-custom {
+            color: var(--bw-text-muted) !important;
+        }
+
+        /* Botón negro estilo minimalista */
+        .btn-kovaq {
+            background-color: var(--bw-black);
+            color: #ffffff;
+            border: 1px solid var(--bw-black);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-kovaq:hover {
+            background-color: #374151;
+            color: #ffffff;
+        }
+
+        .icon-container {
+            width: 56px; 
+            height: 56px;
+            background-color: #ffffff;
+            border: 1px solid var(--bw-border);
+            color: var(--bw-black);
+        }
     </style>
 </head>
 <body>
     <div class="login-card">
         <div class="text-center mb-4">
-            <i class="bi bi-cpu text-indigo fs-1 text-primary"></i>
-            <h3 class="fw-bold mt-2">Kovaq IA</h3>
-            <p class="text-muted small">Sistema de Analítica Retail</p>
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3 icon-container shadow-sm">
+                <i class="bi bi-cpu fs-2"></i>
+            </div>
+            <h3 class="fw-bold m-0" style="color: var(--bw-text-main);">Kovaq IA</h3>
+            <p class="text-secondary-custom small mt-1">Sistema de Analítica Retail</p>
         </div>
 
         {% if error %}
-        <div class="alert alert-danger py-2 small" role="alert">
+        <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger py-2 small rounded mb-3" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ error }}
         </div>
         {% endif %}
 
         <form method="POST" action="/login">
             <div class="mb-3">
-                <label class="form-label small fw-bold text-secondary">Usuario</label>
+                <label class="form-label small fw-bold text-secondary-custom">Usuario</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                    <span class="input-group-text"><i class="bi bi-person text-secondary-custom"></i></span>
                     <input type="text" class="form-control" name="username" placeholder="Ingrese su usuario" required autofocus>
                 </div>
             </div>
             
             <div class="mb-4">
-                <label class="form-label small fw-bold text-secondary">Contraseña</label>
+                <label class="form-label small fw-bold text-secondary-custom">Contraseña</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                    <span class="input-group-text"><i class="bi bi-lock text-secondary-custom"></i></span>
                     <input type="password" class="form-control" name="password" id="passwordInput" placeholder="••••••••" required>
-                    <!-- Botón intuitivo con el ojo (Reconocimiento antes que recuerdo) -->
-                    <button class="btn btn-outline-secondary border" type="button" id="togglePassword">
-                        <i class="bi bi-eye" id="eyeIcon"></i>
+                    <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePassword">
+                        <i class="bi bi-eye text-secondary-custom" id="eyeIcon"></i>
                     </button>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm">
+            <button type="submit" class="btn btn-kovaq w-100 py-2 fw-bold shadow-sm">
                 Iniciar Sesión
             </button>
         </form>
     </div>
 
     <script>
-        // Script interactivo para mostrar/ocultar contraseña de forma fluida
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('passwordInput');
         const eyeIcon = document.getElementById('eyeIcon');

@@ -7,43 +7,141 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        body { background-color: #111827; color: #e5e7eb; font-family: 'Segoe UI', system-ui, sans-serif; }
-        .sidebar { height: 100vh; position: fixed; top: 0; left: 0; width: 260px; background: #212529; color: #fff; padding-top: 20px; z-index: 100; }
-        .sidebar a { color: #adb5bd; text-decoration: none; padding: 12px 20px; display: block; transition: 0.2s; }
-        .sidebar a:hover, .sidebar a.active { color: #fff; background: #343a40; border-left: 4px solid #0d6efd; }
-        .main-content { margin-left: 260px; padding: 0; }
+        :root {
+            --bg-black: #090a0f;
+            --bg-card: #12161f;
+            --bg-hover: #1c222e;
+            --border-monochrome: #2d3545;
+            --text-main: #ffffff;
+            --text-muted: #9ca3af;
+        }
+
+        body { 
+            background-color: var(--bg-black); 
+            color: var(--text-main); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Escritorio */
+        @media (min-width: 768px) {
+            .sidebar-desktop { 
+                height: 100vh; 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                width: 250px; 
+                background: var(--bg-card); 
+                border-right: 1px solid var(--border-monochrome);
+                z-index: 1000; 
+            }
+            .main-content { 
+                margin-left: 250px; 
+                min-height: 100vh;
+            }
+        }
+
+        /* Ajuste Móvil */
+        @media (max-width: 767.98px) {
+            .main-content { 
+                margin-left: 0; 
+                padding-top: 60px; 
+            }
+        }
+
+        .nav-link-custom {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            border-radius: 6px;
+            margin: 3px 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .nav-link-custom:hover, .nav-link-custom.active {
+            color: var(--text-main);
+            background: var(--bg-hover);
+            border-left: 3px solid #ffffff;
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body data-modo="{{ modo or 'local' }}">
 
     {% if usuario_actual %}
-    <nav class="sidebar">
-        <div class="px-3 mb-4">
-            <h4 class="text-white"><i class="bi bi-cpu"></i> Kovaq IA</h4>
-            <small class="text-muted">{{ usuario_actual.nombre }}</small><br>
-            <span class="badge bg-primary mt-1 text-uppercase">{{ usuario_actual.rol }}</span>
+    <!-- Barra Superior Móvil con botón hamburguesa (3 barras) -->
+    <nav class="navbar navbar-dark d-md-none fixed-top px-3" style="background-color: var(--bg-card); border-bottom: 1px solid var(--border-monochrome);">
+        <div class="container-fluid p-0">
+            <span class="navbar-brand fw-bold text-white m-0"><i class="bi bi-cpu-fill me-1"></i> KOVAQ IA</span>
+            <button class="navbar-toggler border-0 shadow-none text-white" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMobile">
+                <i class="bi bi-list fs-2"></i>
+            </button>
         </div>
-        <ul class="nav flex-column">
-            {% for item in menu %}
-                {% if not item.admin_only or (usuario_actual.rol in ['admin', 'admin_tecnico', 'dueno']) %}
-                <li class="nav-item">
-                    <a class="nav-link {% if request.url.path == item.url %}active{% endif %}" href="{{ item.url }}">
-                        <i class="{{ item.icono }} me-2"></i> {{ item.titulo }}
-                    </a>
-                </li>
-                {% endif %}
-            {% endfor %}
-            <li class="nav-item mt-4">
-                <a href="/logout" class="text-danger"><i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión</a>
+    </nav>
+
+    <!-- Menú Desplegable Móvil (Offcanvas) -->
+    <div class="offcanvas offcanvas-start text-white d-md-none" tabindex="-1" id="sidebarMobile" style="width: 270px; background-color: var(--bg-card) !important;">
+        <div class="offcanvas-header" style="border-bottom: 1px solid var(--border-monochrome);">
+            <h5 class="offcanvas-title text-white fw-bold"><i class="bi bi-cpu-fill me-2"></i> KOVAQ IA</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0 pt-3">
+            {% include "partials/menu_links.html" ignore missing %}
+        </div>
+    </div>
+
+    <!-- Sidebar Escritorio -->
+    <aside class="sidebar-desktop d-none d-md-block">
+        <div class="px-3 py-4" style="border-bottom: 1px solid var(--border-monochrome);">
+            <h4 class="text-white fw-bold m-0 d-flex align-items-center gap-2"><i class="bi bi-cpu-fill"></i> KOVAQ IA</h4>
+            <div class="mt-2">
+                <span class="fw-semibold text-white small d-block">{{ usuario_actual.nombre }}</span>
+                <span class="badge border border-secondary text-uppercase small mt-1" style="background-color: var(--bg-black); font-size: 0.7rem;">{{ usuario_actual.rol }}</span>
+            </div>
+        </div>
+        <ul class="nav flex-column mt-3">
+            <li class="nav-item">
+                <a class="nav-link-custom {% if request.url.path == '/dashboard' %}active{% endif %}" href="/dashboard">
+                    <i class="bi bi-speedometer2 me-2"></i> 1. Dashboard General
+                </a>
+            </li>
+            {% if usuario_actual.rol in ['admin', 'admin_tecnico'] %}
+            <li class="nav-item">
+                <a class="nav-link-custom {% if request.url.path == '/camaras' %}active{% endif %}" href="/camaras">
+                    <i class="bi bi-camera-video me-2"></i> 2. Admin Cámaras
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link-custom {% if request.url.path == '/zonas' %}active{% endif %}" href="/zonas">
+                    <i class="bi bi-vector-pen me-2"></i> 3. Configurar Zonas
+                </a>
+            </li>
+            {% endif %}
+            </li>
+            {% if usuario_actual.rol in ['admin', 'dueno'] %}
+            <li class="nav-item">
+                <a class="nav-link-custom {% if request.url.path == '/usuarios' %}active{% endif %}" href="/usuarios">
+                    <i class="bi bi-people me-2"></i> Usuarios
+                </a>
+            </li>
+            {% endif %}
+            <li class="nav-item mt-4 pt-3" style="border-top: 1px solid var(--border-monochrome);">
+                <a href="/logout" class="nav-link-custom text-white opacity-75">
+                    <i class="bi bi-box-arrow-left me-2"></i> Cerrar Sesión
+                </a>
             </li>
         </ul>
-    </nav>
+    </aside>
     {% endif %}
 
-    <div class="main-content">
+    <main class="main-content">
         {% block content %}{% endblock %}
-    </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_scripts %}{% endblock %}

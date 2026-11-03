@@ -8,6 +8,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from database import init_db, leer, escribir, pwd_context
+from ai_agent import preguntar_a_los_datos
 
 SECRET_KEY = os.getenv("JWT_SECRET", "cambiar_esto_en_produccion")
 ALGORITHM = "HS256"
@@ -23,6 +24,7 @@ ROLES_GESTION = ["admin", "admin_tecnico", "dueno"]
 
 app = FastAPI(title="Kovaq Retail Analytics")
 
+# Montaje de carpeta para archivos estáticos (aquí va tu video demo.mp4)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -34,6 +36,35 @@ async def startup_event():
         camara.cambiar_fuente(os.getenv("FUENTE_INICIAL", "webcam"))
         from publicador_video import iniciar_publicacion
         iniciar_publicacion(camara)
+
+# ==========================================
+# MENÚ LATERAL UNIFICADO
+# ==========================================
+MENU = [
+    {"url": "/dashboard", "titulo": "1. Dashboard General", "icono": "bi bi-speedometer2", "admin_only": False},
+
+    {"url": "/usuarios", "titulo": "Gestión Usuarios", "icono": "bi bi-people", "admin_only": True},
+]
+
+# ==========================================
+# AUTENTICACIÓN
+# ==========================================
+async def obtener_usuario_actual(request: Request):
+    token_cookie = request.cookies.get("access_token")
+    if not token_cookie:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
+    try:
+        token = token_cookie.split(" ")[1]
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        usuario = leer(
+            "SELECT u.id, u.username, u.nombre_completo, r.nombre FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.username = ?",
+            (payload.get("sub"),), uno=True
+        )
+        if not usuario:
+            raise HTTPException(status_code=401)
+        return {"id": usuario[0], "username": usuario[1], "nombre": usuario[2], "rol": usuario[3]}
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
 
 @app.get("/")
 async def root():
@@ -65,28 +96,9 @@ async def logout():
     response.delete_cookie("access_token")
     return response
 
-async def obtener_usuario_actual(request: Request):
-    token_cookie = request.cookies.get("access_token")
-    if not token_cookie:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autorizado")
-    try:
-        token = token_cookie.split(" ")[1]
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        usuario = leer(
-            "SELECT u.id, u.username, u.nombre_completo, r.nombre FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.username = ?",
-            (payload.get("sub"),), uno=True
-        )
-        if not usuario:
-            raise HTTPException(status_code=401)
-        return {"id": usuario[0], "username": usuario[1], "nombre": usuario[2], "rol": usuario[3]}
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
-
-MENU = [
-    {"url": "/dashboard", "titulo": "Panel General", "icono": "bi bi-speedometer2", "admin_only": False},
-    {"url": "/usuarios", "titulo": "Gestión de Usuarios", "icono": "bi bi-people", "admin_only": True},
-]
-
+# ==========================================
+# RUTAS DE INTERFAZ WEB (VISTAS)
+# ==========================================
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     try:
@@ -96,6 +108,19 @@ async def dashboard(request: Request):
     return templates.TemplateResponse(request, "dashboard.html", {
         "usuario_actual": user, "menu": MENU, "modo": MODO
     })
+
+
+@app.get("/productos", response_class=HTMLResponse)
+async def pagina_productos(request: Request):
+    try:
+        user = await obtener_usuario_actual(request)
+    except HTTPException:
+        return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse(request, "productos.html", {
+        "usuario_actual": user, "menu": MENU, "modo": MODO
+    })
+
+
 
 @app.get("/usuarios", response_class=HTMLResponse)
 async def listar_usuarios(request: Request):
@@ -113,6 +138,9 @@ async def listar_usuarios(request: Request):
         "usuario_actual": user, "menu": MENU, "modo": MODO
     })
 
+# ==========================================
+# RUTAS DE GESTIÓN DE USUARIOS
+# ==========================================
 @app.post("/usuarios/crear")
 async def crear_usuario(request: Request, nombre: str = Form(...), username: str = Form(...),
                         password: str = Form(...), rol_id: int = Form(...)):
@@ -140,27 +168,76 @@ async def eliminar_usuario(request: Request, usuario_id: int):
     escribir("DELETE FROM usuarios WHERE id = ?", (usuario_id,))
     return RedirectResponse(url="/usuarios", status_code=303)
 
-@app.get("/api/video_feed")
-async def video_feed(request: Request):
+# ==========================================
+# ENDPOINTS DE LA API REST (IA, STATS, VIDEO)
+# ==========================================
+@app.get("/api/sources")
+async def listar_fuentes_camara(request: Request):
+    await obtener_usuario_actual(request)
+    return {
+        "fuentes": [
+            {"id": "webcam", "nombre": "Cámara Web Predeterminada (USB 0)"},
+            {"id": "rtsp", "nombre": "Cámara IP Percha Principal (RTSP)"},
+            {"id": "demo", "nombre": "Video Demostración Supermercado"}
+        ]
+    }
+
+@app.post("/api/chat")
+async def api_chat(request: Request):
+    await obtener_usuario_actual(request)
+    try:
+        datos = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Solicitud inválida")
+
+    mensaje = (datos.get("mensaje") or "").strip()
+    modo = datos.get("modo", "datos")
+    if not mensaje:
+        raise HTTPException(status_code=400, detail="El mensaje está vacío")
+
+    estado_vivo = camara.estado_dict() if camara else {}
+    respuesta_ia = await preguntar_a_los_datos(mensaje, modo=modo, vivo=estado_vivo)
+    return {"respuesta": respuesta_ia}
+
+@app.post("/api/upload")
+async def api_upload(request: Request, archivo: UploadFile = File(...)):
     await obtener_usuario_actual(request)
     if camara is None:
-        raise HTTPException(status_code=503, detail="Video no disponible en modo nube")
+        raise HTTPException(status_code=503, detail="La subida de video solo está disponible en modo local")
 
-    async def generar():
-        ultimo = -1
-        try:
-            while True:
-                if await request.is_disconnected():
-                    break
-                fid, jpg = camara.get_frame_bytes(ultimo)
-                if jpg:
-                    ultimo = fid
-                    yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n"
-                await asyncio.sleep(0.03)
-        except (ConnectionError, asyncio.CancelledError, GeneratorExit):
-            return  # el cliente cerró la conexión
+    ext = os.path.splitext(archivo.filename or "")[1].lower()
+    if ext in {".mp4", ".avi", ".mov", ".mkv"}:
+        tipo = "video"
+    elif ext in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}:
+        tipo = "imagen"
+    else:
+        raise HTTPException(status_code=400, detail="Formato no soportado")
 
-    return StreamingResponse(generar(), media_type="multipart/x-mixed-replace; boundary=frame")
+    contenido = await archivo.read()
+    if len(contenido) > 200 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="El archivo supera 200 MB")
+
+    os.makedirs("uploads", exist_ok=True)
+    ruta = os.path.join("uploads", f"{uuid.uuid4().hex}{ext}")
+    with open(ruta, "wb") as f:
+        f.write(contenido)
+
+    camara.cambiar_fuente(tipo, ruta)
+    return {"ok": True, "tipo": tipo}
+
+@app.post("/api/control")
+async def api_control(request: Request):
+    await obtener_usuario_actual(request)
+    if camara is None:
+        raise HTTPException(status_code=503, detail="Control solo disponible en modo local")
+    datos = await request.json()
+    accion = datos.get("accion")
+    if accion == "pausa":
+        return {"ok": True, "pausado": camara.toggle_pausa()}
+    if accion == "parar":
+        camara.apagar()
+        return {"ok": True, "pausado": False}
+    raise HTTPException(status_code=400, detail="Acción no válida")
 
 @app.post("/api/fuente")
 async def cambiar_fuente_api(request: Request):
@@ -175,27 +252,9 @@ async def cambiar_fuente_api(request: Request):
     camara.cambiar_fuente(tipo, rutas.get(tipo, ""))
     return {"ok": True}
 
-@app.websocket("/ws/video")
-async def websocket_video(websocket: WebSocket):
-    token_cookie = websocket.cookies.get("access_token")
-    if not token_cookie:
-        await websocket.close(code=4001)
-        return
-    try:
-        token = token_cookie.split(" ")[1]
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except Exception:
-        await websocket.close(code=4001)
-        return
-
-    await websocket.accept()
-    try:
-        while True:
-            data = await websocket.receive_bytes()
-            await websocket.send_bytes(data)
-    except WebSocketDisconnect:
-        pass
-
+# ==========================================
+# ESTADÍSTICAS
+# ==========================================
 def _obtener_stats():
     trafico = leer("SELECT COUNT(*) FROM eventos WHERE tipo = 'trafico'", uno=True)[0]
     perm = leer("SELECT COUNT(*), COALESCE(AVG(valor), 0) FROM eventos WHERE tipo = 'permanencia'", uno=True)
@@ -232,65 +291,34 @@ async def api_stats(request: Request):
     s["resumen"] = _texto_resumen(s)
     return s
 
-@app.post("/api/chat")
-async def api_chat(request: Request):
-    await obtener_usuario_actual(request)
-    try:
-        datos = await request.json()
-        mensaje = (datos.get("mensaje") or "").strip()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Solicitud inválida")
-    if not mensaje:
-        raise HTTPException(status_code=400, detail="El mensaje está vacío")
-    try:
-        s = _obtener_stats()
-    except Exception:
-        raise HTTPException(status_code=500, detail="Error consultando los datos")
-
-    respuesta = _texto_resumen(s)
-    if any(p in mensaje.lower() for p in ("venta", "ingreso", "factur")):
-        respuesta = "El sistema no registra ventas, solo tráfico, permanencia e interacciones con perchas. " + respuesta
-    return {"respuesta": respuesta}
-
-@app.post("/api/upload")
-async def api_upload(request: Request, archivo: UploadFile = File(...)):
+# ==========================================
+# VIDEO STREAMING (LOCAL)
+# ==========================================
+@app.get("/api/video_feed")
+async def video_feed(request: Request):
     await obtener_usuario_actual(request)
     if camara is None:
-        raise HTTPException(status_code=503, detail="La subida de video solo está disponible en modo local")
+        raise HTTPException(status_code=503, detail="Video no disponible en modo nube")
 
-    ext = os.path.splitext(archivo.filename or "")[1].lower()
-    if ext in {".mp4", ".avi", ".mov", ".mkv"}:
-        tipo = "video"
-    elif ext in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}:
-        tipo = "imagen"
-    else:
-        raise HTTPException(status_code=400, detail="Formato no soportado")
+    async def generar():
+        ultimo = -1
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                fid, jpg = camara.get_frame_bytes(ultimo)
+                if jpg:
+                    ultimo = fid
+                    yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n"
+                await asyncio.sleep(0.03)
+        except (ConnectionError, asyncio.CancelledError, GeneratorExit):
+            return
 
-    contenido = await archivo.read()
-    if len(contenido) > 200 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="El archivo supera 200 MB")
+    return StreamingResponse(generar(), media_type="multipart/x-mixed-replace; boundary=frame")
 
-    os.makedirs("uploads", exist_ok=True)
-    ruta = os.path.join("uploads", f"{uuid.uuid4().hex}{ext}")
-    with open(ruta, "wb") as f:
-        f.write(contenido)
-
-    camara.cambiar_fuente(tipo, ruta)
-    return {"ok": True, "tipo": tipo}
-@app.post("/api/control")
-async def api_control(request: Request):
-    await obtener_usuario_actual(request)
-    if camara is None:
-        raise HTTPException(status_code=503, detail="Control solo disponible en modo local")
-    datos = await request.json()
-    accion = datos.get("accion")
-    if accion == "pausa":
-        return {"ok": True, "pausado": camara.toggle_pausa()}
-    if accion == "parar":
-        camara.apagar()
-        return {"ok": True, "pausado": False}
-    raise HTTPException(status_code=400, detail="Acción no válida")
-# ---------- VIDEO EN VIVO PARA LA WEB (solo último cuadro, nada se guarda) ----------
+# ==========================================
+# VIDEO EN VIVO PARA LA WEB (MODO NUBE)
+# ==========================================
 VIDEO_TOKEN = os.getenv("VIDEO_PUSH_TOKEN", "")
 _ultimo_frame = {"jpg": None, "id": 0}
 _frame_lock = threading.Lock()
