@@ -426,22 +426,33 @@ function activarCamaraManual() {
     videoContainer.innerHTML = '';
 
     const img = document.createElement("img");
-    img.alt = "Stream de Cámara";
+    img.alt = "Stream de Cámara en Vivo";
     img.style.cssText = "width:100%; height:auto; max-height:460px; object-fit:contain; display:block;";
     
-    // Si la cámara web o el stream falla en la web, muestra el video de respaldo de inmediato
+    let streamActivo = false;
+
+    // Si la cámara o el feed de Python falla al conectar, mostramos el video de respaldo
     img.onerror = () => {
-        videoContainer.innerHTML = `
-            <video autoplay loop muted playsinline class="w-100 h-100" style="object-fit:cover; max-height:460px; opacity:0.9;">
-                <source src="/static/demo_supermercado.mp4" type="video/mp4">
-            </video>
-            <div class="position-absolute top-0 end-0 m-3 px-2 py-1 bg-white text-dark border border-dark small fw-bold shadow-sm">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i> Cámara no conectada. Reproduciendo video de demostración.
-            </div>
-        `;
+        if (!streamActivo) {
+            videoContainer.innerHTML = `
+                <video autoplay loop muted playsinline class="w-100 h-100" style="object-fit:cover; max-height:460px; opacity:0.9;">
+                    <source src="/static/demo_supermercado.mp4" type="video/mp4">
+                </video>
+                <div class="position-absolute top-0 end-0 m-3 px-2 py-1 bg-white text-dark border border-dark small fw-bold shadow-sm">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Sin señal de cámara. Usando video de demostración.
+                </div>
+            `;
+        }
+    };
+
+    // Tan pronto como la imagen en vivo empiece a recibir fotogramas del servidor, confirmamos que hay señal real
+    img.onload = () => {
+        streamActivo = true;
     };
 
     videoContainer.appendChild(img);
+    
+    // Añadimos un parámetro de tiempo único para forzar al navegador a solicitar el flujo fresco
     img.src = VIDEO_URL + "?source=" + fuenteElegida + "&t=" + Date.now();
 }
 
