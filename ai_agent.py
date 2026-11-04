@@ -1,4 +1,3 @@
-"""Asistente Kovaq IA con puente intermediario y sintaxis limpia."""
 import asyncio
 import logging
 import os
@@ -15,7 +14,8 @@ log = logging.getLogger("kovaq.ia")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").replace('"', "").replace("'", "").strip()
 client = AsyncGroq(api_key=GROQ_API_KEY, timeout=5.0, max_retries=0) if GROQ_API_KEY else None
 
-PREFERIDOS = ["qwen/qwen3.8-27b", "openai/gpt-oss-20b"]
+# Modelos oficiales estables y rápidos de Groq
+PREFERIDOS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 MODOS = ("datos", "recomendacion")
 TTL_DATOS = 60
 _cache_datos: dict = {"t": 0.0, "d": None}
@@ -51,29 +51,27 @@ def _obtener_datos_base() -> dict:
 
 def puente_analisis_intermedio(pregunta: str, modo: str, d: dict) -> str:
     """
-    Puente intermediario: analiza los datos localmente antes de pasarlos a la IA
-    o responde de inmediato si detecta intenciones comunes.
+    Puente tolerante a errores de escritura para capturar consultas comunes
+    de forma inmediata e interactiva.
     """
     p = pregunta.lower()
 
-    if "venta" in p or "caja" in p or "dinero" in p:
-        return "📊 Kovaq mide tráfico, permanencia e interacciones visuales en percha, no transiciones de caja ni ventas directas."
+    if any(w in p for w in ["venta", "caja", "dinero", "factura"]):
+        return "📊 Kovaq mide tráfico, permanencia e interacciones visuales en percha en tiempo real, no transiciones directas de caja."
 
-    if modo == "datos" and ("resumen" in p or "todo" in p or "como va" in p):
+    if any(w in p for w in ["resumen", "todo", "como va", "estado", "general"]):
         return (
-            f"📈 Resumen actual del supermercado:\n"
-            f"- Tráfico total: {d['trafico']} personas detectadas.\n"
-            f"- Permanencia promedio: {d['permanencia']} segundos frente a percha.\n"
+            f"📈 Estado actual en piso de ventas:\n"
+            f"- Tráfico detectado: {d['trafico']} personas.\n"
+            f"- Retención media: {d['permanencia']} segundos.\n"
             f"- Interacciones físicas: {d['interacciones']} contactos.\n"
-            f"- Productos destacados: {', '.join(d['productos'])}."
+            f"- Top productos en percha: {', '.join(d['productos'])}."
         )
 
-    if modo == "recomendacion" and d['interacciones'] == 0:
-        return (
-            "📢 Sugerencia de Marketing (Modo Preventivo):\n"
-            "Como aún hay pocas interacciones registradas en las perchas principales, "
-            "te recomiendo colocar cartelería de alto contraste o códigos QR llamativos en los pasillos de mayor tráfico para elevar el tiempo de permanencia."
-        )
+    # Detecta variaciones o errores tipográficos como "prodcutos", "rotado", "dias", etc.
+    if any(w in p for w in ["product", "prodcut", "rotad", "movimient", "sku", "articulo"]):
+        top_str = ", ".join(d['productos'])
+        return f"📦 Analizando el flujo de la percha, los artículos con mayor interacción física son: {top_str}. ¿Te gustaría que diseñe una campaña digital o de Meta Ads enfocada en ellos?"
 
     return None
 
@@ -85,36 +83,44 @@ async def preguntar_a_los_datos(pregunta: str, modo: str = "datos", vivo: dict |
     if modo not in MODOS:
         modo = "datos"
 
-    # 1. Obtenemos los datos limpios y cacheados
     d = await asyncio.to_thread(_obtener_datos_base)
 
-    # 2. PUENTE INTERMEDIARIO (Respuesta instantánea sin llamadas lentas)
+    # 1. Puente inteligente para respuestas rápidas y conversacionales
     respuesta_directa = puente_analisis_intermedio(pregunta, modo, d)
     if respuesta_directa:
         return respuesta_directa
 
-    # 3. Contexto ultrarreducido para la IA
+    # 2. Contexto conversacional para la IA en Groq
     contexto = (
-        f"Datos percha: Tráfico={d['trafico']}, Permanencia={d['permanencia']}s, "
-        f"Interacciones={d['interacciones']}, Top={', '.join(d['productos'])}.\n"
-        f"Modo: {modo}. Responde en español en máximo 2 líneas de forma muy directa."
+        f"Eres Kovaq IA, un asistente experto en Retail Analytics y marketing in-store. "
+        f"Datos actuales de las perchas: Tráfico={d['trafico']}, Permanencia={d['permanencia']}s, "
+        f"Interacciones={d['interacciones']}, Top productos={', '.join(d['productos'])}.\n"
+        f"Modo actual: {modo}. Responde de forma sumamente interactiva, amigable y directa en español (máximo 3 líneas), adaptándote a lo que el usuario pregunta."
     )
 
-    try:
-        r = await asyncio.wait_for(
-            client.chat.completions.create(
-                model=PREFERIDOS[0],
-                temperature=0.1,
-                max_tokens=150,
-                messages=[
-                    {"role": "system", "content": contexto},
-                    {"role": "user", "content": pregunta},
-                ],
-            ),
-            timeout=4.0,
-        )
-        return (r.choices[0].message.content or "").strip()
-    except Exception:
-        if modo == "recomendacion":
-            return f"📢 Sugerencia basada en datos actuales ({d['interacciones']} interacciones, {d['permanencia']}s de permanencia): Optimiza la iluminación y el etiquetado frontal en los productos con menor rotación."
-        return f"📊 Cifras actuales: {d['trafico']} personas de tráfico, {d['permanencia']}s de permanencia promedio y {d['interacciones']} interacciones registradas."
+    for modelo in PREFERIDOS:
+        try:
+            r = await asyncio.wait_for(
+                client.chat.completions.create(
+                    model=modelo,
+                    temperature=0.4,
+                    max_tokens=200,
+                    messages=[
+                        {"role": "system", "content": contexto},
+                        {"role": "user", "content": pregunta},
+                    ],
+                ),
+                timeout=4.0,
+            )
+            texto_respuesta = (r.choices[0].message.content or "").strip()
+            if texto_respuesta:
+                return texto_respuesta
+        except Exception as err:
+            log.warning("Fallo con el modelo %s: %r", modelo, err)
+            continue
+
+    # 3. Fallback dinámico y contextual si la API tarda o falla
+    if modo == "recomendacion":
+        return f"💡 Sugerencia comercial basada en los datos actuales ({d['interacciones']} interacciones, {d['permanencia']}s de retención): Te sugiero destacar con cartelería o pauta digital los artículos de mayor interés como {', '.join(d['productos'])}."
+    
+    return f"📊 Cifras al momento: Tenemos un tráfico de {d['trafico']} personas, una permanencia promedio de {d['permanencia']}s y {d['interacciones']} interacciones registradas en percha."

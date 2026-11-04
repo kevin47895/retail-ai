@@ -96,7 +96,7 @@
             <span class="badge bg-dark text-white uppercase tracking-wider mb-1 px-2 py-1 small">Retail Data Intelligence</span>
             <h1 class="fw-bold text-dark m-0 fs-3">KOVAQ Retail Analytics</h1>
             <p class="text-muted small m-0 fst-italic mt-1">
-                “Convertimos cada percha en datos que optimizan la publicidad y potencian todo el marketing del supermercado.”
+                “Convertimos cada percha en datos que optimizan la publicidad digital, los Reels y potencian el marketing del supermercado.”
             </p>
         </div>
     </div>
@@ -105,14 +105,14 @@
     <nav class="nav-bw mb-4" id="mainTabs">
         <button class="nav-link active" data-target="tab-vivo"><i class="bi bi-camera-video me-1"></i> Vista en Vivo</button>
         <button class="nav-link" data-target="tab-datos"><i class="bi bi-bar-chart-line me-1"></i> Datos de Percha</button>
-        <button class="nav-link" data-target="tab-analisis"><i class="bi bi-graph-up me-1"></i> Análisis</button>
-        <button class="nav-link" data-target="tab-productos"><i class="bi bi-box-seam me-1"></i> Productos</button>
+        <button class="nav-link" data-target="tab-analisis"><i class="bi bi-graph-up me-1"></i> Análisis Dinámico</button>
+        <button class="nav-link" data-target="tab-productos"><i class="bi bi-box-seam me-1"></i> Estrategia Digital Ads</button>
         <button class="nav-link" data-target="tab-marketing"><i class="bi bi-megaphone me-1"></i> Publicidad / Marketing</button>
         <button class="nav-link" data-target="tab-camaras"><i class="bi bi-sliders me-1"></i> Gestión de Cámaras</button>
     </nav>
 
     <!-- ================================================= -->
-    <!-- 1. VISTA EN VIVO -->
+    <!-- 1. VISTA EN VIVO (Optimizado para evitar pantalla negra) -->
     <!-- ================================================= -->
     <div id="tab-vivo" class="tab-pane-bw active">
         <div class="row g-4">
@@ -133,12 +133,7 @@
 
                     <div class="card-body p-2 position-relative d-flex flex-column align-items-center justify-content-center bg-black" style="min-height: 480px; border-radius: 0 0 8px 8px;">
                         <div id="video-container" class="w-100 h-100 d-flex align-items-center justify-content-center position-relative" style="min-height: 460px;">
-                            <div class="text-center text-white p-4">
-                                <i class="bi bi-camera-video-off fs-1 text-muted d-block mb-2"></i>
-                                <h6 class="text-light mb-1">Cámara en espera</h6>
-                                <p class="small text-muted mb-3">La cámara no se inicia automáticamente. Haga clic en "Iniciar Cámara" o suba un archivo.</p>
-                                <button type="button" class="btn btn-light btn-sm fw-bold px-4" onclick="activarCamaraManual()">Encender Cámara Ahora</button>
-                            </div>
+                            <!-- El streaming se inyecta por JS de forma fluida -->
                         </div>
                     </div>
 
@@ -156,70 +151,76 @@
     </div>
 
     <!-- ================================================= -->
-    <!-- 2. DATOS DE PERCHA -->
+    <!-- 2. DATOS DE PERCHA (KPIs) -->
     <!-- ================================================= -->
     <div id="tab-datos" class="tab-pane-bw">
         <div class="row g-3 mb-4">
-            <div class="col-12 col-sm-6 col-xl-4">
+            <div class="col-12 col-sm-6 col-xl-3">
                 <div class="card card-bw p-3 shadow-sm">
-                    <span class="text-uppercase small fw-bold text-muted">Total Detecciones (Tráfico)</span>
-                    <h2 class="fw-bold text-dark mb-0 mt-1" id="stat-trafico">237</h2>
-                    <small class="text-muted">Personas contabilizadas</small>
+                    <span class="text-uppercase small fw-bold text-muted">Total Detecciones</span>
+                    <h2 class="fw-bold text-dark mb-0 mt-1" id="stat-trafico">0</h2>
+                    <small class="text-muted">Personas (Tráfico)</small>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-xl-4">
+            <div class="col-12 col-sm-6 col-xl-3">
                 <div class="card card-bw p-3 shadow-sm">
-                    <span class="text-uppercase small fw-bold text-muted">Permanencia Promedio</span>
-                    <h2 class="fw-bold text-dark mb-0 mt-1" id="stat-permanencia">16.1 s</h2>
-                    <small class="text-muted">Tiempo medio frente a percha</small>
+                    <span class="text-uppercase small fw-bold text-muted">Retención Promedio</span>
+                    <h2 class="fw-bold text-dark mb-0 mt-1" id="stat-permanencia">0.0 s</h2>
+                    <small class="text-muted">Frente a la percha</small>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-xl-4">
+            <div class="col-12 col-sm-6 col-xl-3">
                 <div class="card card-bw p-3 shadow-sm">
                     <span class="text-uppercase small fw-bold text-muted">Interacciones Totales</span>
-                    <h2 class="fw-bold text-dark mb-0 mt-1" id="stat-interacciones">16</h2>
-                    <small class="text-muted">Contactos físicos con productos</small>
+                    <h2 class="fw-bold text-dark mb-0 mt-1" id="stat-interacciones">0</h2>
+                    <small class="text-muted">Agarres o contactos</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card card-bw p-3 shadow-sm bg-dark text-white">
+                    <span class="text-uppercase small fw-bold text-light">Conversión de Percha</span>
+                    <h2 class="fw-bold text-white mb-0 mt-1" id="stat-conversion">0%</h2>
+                    <small class="text-light">Interacciones / Tráfico</small>
                 </div>
             </div>
         </div>
 
         <div class="card card-bw p-4 shadow-sm">
-            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-bar-chart me-2"></i> Productos con Mayor Interacción en Percha</h5>
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-bar-chart me-2"></i> Productos con Mayor Interacción (Tiempo Real)</h5>
             <ul class="list-group list-group-flush" id="lista-productos-datos">
-                <li class="list-group-item bg-transparent border-secondary px-0 d-flex justify-content-between text-dark">
-                    <span><i class="bi bi-box me-2"></i> cell phone</span>
-                    <span class="badge bg-dark text-white">14 interacciones</span>
-                </li>
-                <li class="list-group-item bg-transparent border-secondary px-0 d-flex justify-content-between text-dark">
-                    <span><i class="bi bi-box me-2"></i> bottle</span>
-                    <span class="badge bg-dark text-white">2 interacciones</span>
-                </li>
+                <li class="list-group-item bg-transparent border-secondary px-0 text-muted">Esperando datos de la cámara...</li>
             </ul>
         </div>
     </div>
 
     <!-- ================================================= -->
-    <!-- 3. ANÁLISIS DETALLADO -->
+    <!-- 3. ANÁLISIS DINÁMICO -->
     <!-- ================================================= -->
     <div id="tab-analisis" class="tab-pane-bw">
         <div class="card card-bw p-4 shadow-sm mb-4">
-            <h4 class="fw-bold text-dark mb-2"><i class="bi bi-graph-up-arrow me-2"></i> Análisis Profundo de Comportamiento</h4>
-            <p class="text-muted small">Evaluación de zonas frías y calientes basada en la recolección continua de datos de las cámaras y perchas.</p>
-
+            <h4 class="fw-bold text-dark mb-2"><i class="bi bi-bullseye me-2"></i> Análisis de Efectividad en Piso de Ventas</h4>
+            <p class="text-muted small">Insights generados automáticamente según el comportamiento del cliente frente a las perchas físicas.</p>
+            
             <hr class="border-secondary my-3">
 
-            <div class="row g-4">
-                <div class="col-12 col-md-6">
-                    <div class="p-3 border border-dark rounded bg-white h-100">
-                        <h6 class="fw-bold text-dark m-0 mb-2">Zonas de Mayor Retención</h6>
-                        <p class="small text-muted mb-0">Los pasillos centrales registran una permanencia superior a 16 segundos, indicando alta consideración de compra previa al agarre del producto.</p>
+            <div class="row g-4" id="contenedor-analisis">
+                <div class="col-12">
+                    <div class="p-4 border border-dark rounded bg-white shadow-sm">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-cpu me-2"></i> Resumen de Comportamiento Global</h6>
+                        <p class="mb-0 text-dark fs-6" id="texto-resumen-ia">Recopilando datos de comportamiento para generar insights...</p>
                     </div>
                 </div>
-
+                
                 <div class="col-12 col-md-6">
-                    <div class="p-3 border border-dark rounded bg-white h-100">
-                        <h6 class="fw-bold text-dark m-0 mb-2">Zonas con Tráfico de Paso Rápido</h6>
-                        <p class="small text-muted mb-0">Los extremos de las perchas muestran tiempos menores a 2 segundos ("pasó de largo"), requiriendo optimización de señalización visual.</p>
+                    <div class="p-3 border border-secondary rounded bg-light h-100">
+                        <h6 class="fw-bold text-dark mb-2">Zonas de Fricción (Puntos Ciegos)</h6>
+                        <p class="small text-muted mb-0" id="texto-friccion">Calculando tiempos de abandono menores a 2 segundos frente a productos clave.</p>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="p-3 border border-secondary rounded bg-light h-100">
+                        <h6 class="fw-bold text-dark mb-2">Potencial de Retargeting y Ads</h6>
+                        <p class="small text-muted mb-0" id="texto-retargeting">Cruzando datos de alta permanencia sin interacción para sugerir impulsos publicitarios o campañas digitales.</p>
                     </div>
                 </div>
             </div>
@@ -227,33 +228,31 @@
     </div>
 
     <!-- ================================================= -->
-    <!-- 4. PRODUCTOS -->
+    <!-- 4. PRODUCTOS (ESTRATEGIA DIGITAL ADS) -->
     <!-- ================================================= -->
     <div id="tab-productos" class="tab-pane-bw">
-        <div class="card card-bw p-4 shadow-sm">
-            <h4 class="fw-bold text-dark mb-3"><i class="bi bi-box-seam me-2"></i> Catálogo y Rendimiento por SKU</h4>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
+        <div class="card card-bw p-4 shadow-sm border-2 border-dark">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                <div>
+                    <h4 class="fw-bold text-dark m-0"><i class="bi bi-megaphone me-2"></i> Diagnóstico Dinámico para Meta Ads & Reels</h4>
+                    <p class="text-muted small m-0 mt-1">Sugerencias automáticas de campañas digitales basadas en el tráfico e interacciones reales recolectadas.</p>
+                </div>
+            </div>
+            
+            <div class="table-responsive mt-3">
+                <table class="table table-hover align-middle border-top border-secondary">
                     <thead class="table-dark text-white small">
                         <tr>
                             <th>SKU / Producto</th>
-                            <th>Zona / Pasillo</th>
-                            <th>Interacciones Reg.</th>
-                            <th>Diagnóstico de Percha</th>
+                            <th>Tráfico Estimado</th>
+                            <th>Interacciones</th>
+                            <th>Conversión</th>
+                            <th>Sugerencia IA de Marketing Digital</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tabla-catalogo-body">
                         <tr>
-                            <td class="fw-bold">Leche Chocolatada Toni 1L</td>
-                            <td>Pasillo Lácteos</td>
-                            <td>3 interacciones</td>
-                            <td><span class="badge bg-danger text-white">Baja rotación (&gt; 14 días)</span></td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Papas Chips BBQ 150g</td>
-                            <td>Pasillo Snacks</td>
-                            <td>45 interacciones</td>
-                            <td><span class="badge bg-warning text-dark">Alta duda de precio</span></td>
+                            <td colspan="5" class="text-center text-muted small py-4">Esperando recolección de datos de cámara para generar campañas dinámicas...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -262,7 +261,7 @@
     </div>
 
     <!-- ================================================= -->
-    <!-- 5. PUBLICIDAD / MARKETING CON IA -->
+    <!-- 5. PUBLICIDAD / MARKETING (Con las tarjetas solicitadas + Chat IA) -->
     <!-- ================================================= -->
     <div id="tab-marketing" class="tab-pane-bw">
         <div class="card card-bw p-4 shadow-sm mb-4 border-2 border-dark">
@@ -270,17 +269,17 @@
                 <i class="bi bi-robot fs-3 text-dark me-3"></i>
                 <div>
                     <h4 class="fw-bold text-dark m-0">Marketing y Publicidad con IA</h4>
-                    <p class="small text-muted m-0">Respuestas basadas en los datos registrados por las cámaras y perchas.</p>
+                    <p class="small text-muted m-0">Respuestas basadas en los datos registrados por las cámaras y perchas en tiempo real.</p>
                 </div>
             </div>
 
-            <!-- Sugerencias Automáticas Precargadas -->
+            <!-- Sugerencias Automáticas Precargadas (Estructura Solicitada) -->
             <div class="row g-4 mt-2 mb-4">
                 <div class="col-12 col-md-6">
                     <div class="p-3 border border-dark rounded bg-white h-100 d-flex flex-column">
                         <span class="badge bg-dark text-white mb-2 align-self-start">Objetivo Meta: Interacción</span>
-                        <h5 class="fw-bold text-dark">Caso Crítico: Leche Chocolatada Toni</h5>
-                        <p class="small text-muted mb-3">
+                        <h5 class="fw-bold text-dark" id="mkt-card-1-titulo">Caso Crítico: Leche Chocolatada Toni</h5>
+                        <p class="small text-muted mb-3" id="mkt-card-1-desc">
                             El sistema detecta baja evacuación en percha a pesar de estar ubicada en zona principal.<br>
                             <strong>Sugerencia:</strong> Invertir $60 USD por 2 semanas bajo objetivo de interacción con Reels cortos de máximo 15 segundos.
                         </p>
@@ -291,8 +290,8 @@
                 <div class="col-12 col-md-6">
                     <div class="p-3 border border-dark rounded bg-white h-100 d-flex flex-column">
                         <span class="badge bg-dark text-white mb-2 align-self-start">Objetivo Meta: Tráfico</span>
-                        <h5 class="fw-bold text-dark">Optimización de Precio: Papas Chips BBQ</h5>
-                        <p class="small text-muted mb-3">
+                        <h5 class="fw-bold text-dark" id="mkt-card-2-titulo">Optimización de Precio: Papas Chips BBQ</h5>
+                        <p class="small text-muted mb-3" id="mkt-card-2-desc">
                             Alta permanencia pero conversión lenta. <br>
                             <strong>Sugerencia:</strong> Campaña de tráfico con cupón digital de descuento de fin de semana por $35 USD.
                         </p>
@@ -301,17 +300,17 @@
                 </div>
             </div>
 
-            <!-- CHAT CON IA: modo datos o recomendaciones -->
+            <!-- CHAT CON IA (Sin cuello de botella) -->
             <div class="card border border-dark shadow-sm bg-white p-3">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                     <h6 class="fw-bold text-dark m-0"><i class="bi bi-chat-left-dots me-1"></i> Consultar Kovaq IA</h6>
                     <select id="chat-modo" class="form-select form-select-sm border-dark text-dark" style="max-width: 260px;">
-                        <option value="datos">Consultar datos</option>
                         <option value="recomendacion">Recomendaciones de marketing</option>
+                        <option value="datos">Consultar datos</option>
                     </select>
                 </div>
 
-                <div id="chat-messages" class="overflow-auto p-3 mb-3 bg-light rounded border border-secondary" style="max-height: 300px; min-height: 150px;">
+                <div id="chat-messages" class="overflow-auto p-3 mb-3 bg-light rounded border border-secondary" style="max-height: 300px; min-height: 200px;">
                     <div class="p-2 rounded bg-white border border-secondary small text-dark mb-2 shadow-sm me-auto" style="max-width: 85%;">
                         <strong>Kovaq IA:</strong>
                         <span class="texto" style="white-space: pre-wrap;">Hola. Elige un modo: "Consultar datos" para cifras de la base, o "Recomendaciones de marketing" para sugerencias de campaña.</span>
@@ -319,9 +318,9 @@
                 </div>
 
                 <form id="chat-form" onsubmit="preguntarIA(event)" class="input-group">
-                    <input type="text" id="chat-input" class="form-control form-control-sm border-dark text-dark bg-white"
+                    <input type="text" id="chat-input" class="form-control border-dark text-dark bg-white"
                            placeholder="Ej. ¿Cuántas interacciones tuvo la leche Toni?" autocomplete="off" required>
-                    <button type="submit" id="chat-submit" class="btn btn-bw-dark btn-sm">
+                    <button type="submit" id="chat-submit" class="btn btn-bw-dark px-4">
                         <i class="bi bi-send me-1"></i> Enviar
                     </button>
                 </form>
@@ -341,18 +340,18 @@
 
                     <form onsubmit="agregarCamara(event)">
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-dark">Nombre de la Ubicación / Pasillo</label>
-                            <input type="text" id="cam-nombre" class="form-control form-control-sm border-dark" placeholder="Ej. Percha Lácteos - Pasillo 2" required>
+                            <label class="form-label small fw-bold text-dark">Ubicación / Zona</label>
+                            <input type="text" id="cam-nombre" class="form-control form-control-sm border-dark" placeholder="Ej. Percha Lácteos" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-dark">Ruta de Conexión (RTSP / USB / URL)</label>
-                            <input type="text" id="cam-url" class="form-control form-control-sm border-dark" placeholder="rtsp://admin:pass@192.168.1.50:554" required>
+                            <label class="form-label small fw-bold text-dark">URL RTSP</label>
+                            <input type="text" id="cam-url" class="form-control form-control-sm border-dark" placeholder="rtsp://admin:pass@IP" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-dark">Estado Inicial</label>
+                            <label class="form-label small fw-bold text-dark">Estado</label>
                             <select id="cam-estado" class="form-select form-select-sm border-dark">
-                                <option value="Activa">Activa (Monitoreando)</option>
-                                <option value="Inactiva">Inactiva (En Pausa)</option>
+                                <option value="Activa">Activa</option>
+                                <option value="Inactiva">Inactiva</option>
                             </select>
                         </div>
                         <button type="submit" class="btn btn-bw-dark btn-sm w-100 fw-bold py-2 mt-2">
@@ -364,9 +363,7 @@
 
             <div class="col-12 col-lg-7">
                 <div class="card card-bw p-4 shadow-sm h-100">
-                    <h4 class="fw-bold text-dark mb-3"><i class="bi bi-list-check me-2"></i> Cámaras Conectadas al Sistema</h4>
-                    <p class="small text-muted mb-3">Listado general de dispositivos de captura de video activos.</p>
-
+                    <h4 class="fw-bold text-dark mb-3"><i class="bi bi-list-check me-2"></i> Cámaras Conectadas</h4>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead class="table-dark text-white small">
@@ -379,17 +376,9 @@
                             </thead>
                             <tbody id="tabla-camaras-body">
                                 <tr>
-                                    <td class="fw-bold">Cámara IP Principal (Percha Central)</td>
+                                    <td class="fw-bold">Cámara IP Principal</td>
                                     <td class="text-muted small font-monospace">rtsp://192.168.1.100:554</td>
                                     <td><span class="badge bg-dark text-white">Activa</span></td>
-                                    <td class="text-center">
-                                        <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="eliminarFila(this)"><i class="bi bi-trash"></i></button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">Cámara Web Local (USB 0)</td>
-                                    <td class="text-muted small font-monospace">webcam://device-0</td>
-                                    <td><span class="badge bg-secondary text-white">Activa</span></td>
                                     <td class="text-center">
                                         <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="eliminarFila(this)"><i class="bi bi-trash"></i></button>
                                     </td>
@@ -408,6 +397,7 @@
 {% block extra_scripts %}
 <script>
 // NAVEGACIÓN SPA (PESTAÑAS)
+// NAVEGACIÓN SPA (PESTAÑAS)
 document.querySelectorAll('#mainTabs .nav-link').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('#mainTabs .nav-link').forEach(b => b.classList.remove('active'));
@@ -421,53 +411,72 @@ document.querySelectorAll('#mainTabs .nav-link').forEach(btn => {
 const VIDEO_URL = (document.body.dataset.modo === "nube") ? "/api/video_live" : "/api/video_feed";
 const videoContainer = document.getElementById("video-container");
 
-function activarCamaraManual() {
+// 1. Al cargar la página por primera vez, mostramos SOLO el video de respaldo (demostración)
+window.addEventListener('DOMContentLoaded', () => {
+    mostrarVideoRespaldoInicial();
+});
+
+function mostrarVideoRespaldoInicial() {
+    videoContainer.innerHTML = `
+        <video autoplay loop muted playsinline class="w-100 h-100" style="object-fit:cover; max-height:460px; opacity:0.9;">
+            <source src="/static/demo_supermercado.mp4" type="video/mp4">
+        </video>
+        <div class="position-absolute top-0 end-0 m-3 px-2 py-1 bg-white text-dark border border-dark small fw-bold shadow-sm">
+            <i class="bi bi-info-circle-fill me-1"></i> Modo Demostración (Haga clic en "Iniciar Cámara")
+        </div>
+    `;
+}
+
+// 2. Al hacer clic en "Iniciar Cámara", activamos el streaming en vivo de verdad
+async function activarCamaraManual() {
     const fuenteElegida = document.getElementById("select-camara").value;
+    
+    // Mostramos un indicador de carga limpio
+    videoContainer.innerHTML = `
+        <div class="text-center text-white p-4">
+            <div class="spinner-border text-light mb-2" role="status"></div>
+            <h6 class="text-light mb-1">Iniciando dispositivo de video...</h6>
+            <p class="small text-muted mb-0">Estabilizando señal de la cámara.</p>
+        </div>
+    `;
+
+    try {
+        await fetch("/api/fuente", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tipo: fuenteElegida })
+        });
+        
+        // Damos un pequeño respiro para que el hardware libere el puerto y cargamos el stream
+        setTimeout(cargarStreamEnVivo, 1000);
+    } catch (e) {
+        console.error("Error al cambiar fuente", e);
+        cargarStreamEnVivo();
+    }
+}
+
+// 3. Pinta la imagen en vivo y si hay un error real de hardware, avisa amigablemente
+function cargarStreamEnVivo() {
     videoContainer.innerHTML = '';
 
     const img = document.createElement("img");
     img.alt = "Stream de Cámara en Vivo";
     img.style.cssText = "width:100%; height:auto; max-height:460px; object-fit:contain; display:block;";
     
-    let streamCargado = false;
-
-    // Función para mostrar el video de respaldo de manera segura
-    const mostrarRespaldo = () => {
-        if (!streamCargado) {
-            videoContainer.innerHTML = `
-                <video autoplay loop muted playsinline class="w-100 h-100" style="object-fit:cover; max-height:460px; opacity:0.9;">
-                    <source src="/static/demo_supermercado.mp4" type="video/mp4">
-                </video>
-                <div class="position-absolute top-0 end-0 m-3 px-2 py-1 bg-white text-dark border border-dark small fw-bold shadow-sm">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Sin señal de cámara. Reproduciendo video de demostración.
-                </div>
-            `;
-        }
-    };
-
-    // Si ocurre un error de red directo
-    img.onerror = mostrarRespaldo;
-
-    // Si la imagen empieza a cargar con éxito
-    img.onload = () => {
-        streamCargado = true;
+    img.onerror = () => {
+        videoContainer.innerHTML = `
+            <div class="text-center text-white p-4">
+                <i class="bi bi-camera-video-off fs-1 text-muted d-block mb-2"></i>
+                <h6 class="text-light mb-1">Conectando con la cámara...</h6>
+                <p class="small text-muted mb-3">Si el dispositivo está ocupado, asegúrate de liberar la webcam.</p>
+                <button type="button" class="btn btn-light btn-sm fw-bold px-4" onclick="cargarStreamEnVivo()">Reintentar Conexión</button>
+            </div>
+        `;
     };
 
     videoContainer.appendChild(img);
-    img.src = VIDEO_URL + "?source=" + fuenteElegida + "&t=" + Date.now();
-
-    // TEMPORIZADOR DE SEGURIDAD: Si en 2.5 segundos la cámara no emitió imagen, forzamos el video de respaldo
-    setTimeout(() => {
-        if (!streamCargado) {
-            mostrarRespaldo();
-        }
-    }, 2500);
+    img.src = VIDEO_URL + "?t=" + Date.now();
 }
-
-// Opcional: Si quieres que el video de respaldo cargue automáticamente al abrir la página web
-window.addEventListener('DOMContentLoaded', () => {
-    activarCamaraManual();
-});
 
 async function subirArchivoLocal() {
     const input = document.getElementById("archivo-input");
@@ -475,7 +484,7 @@ async function subirArchivoLocal() {
     const archivo = input.files[0];
 
     if (!archivo) {
-        statusDiv.innerText = "Seleccione un archivo primero.";
+        statusDiv.innerText = "Seleccione un archivo.";
         return;
     }
 
@@ -486,21 +495,21 @@ async function subirArchivoLocal() {
     try {
         const res = await fetch("/api/upload", { method: "POST", body: formData });
         if (!res.ok) throw new Error("Error en servidor");
-        statusDiv.innerText = "¡Archivo procesado con éxito!";
+        
+        statusDiv.innerText = "¡Procesado con éxito!";
         input.value = "";
-        activarCamaraManual();
+        cargarStreamUI();
     } catch (err) {
         statusDiv.innerText = "Error al subir archivo.";
     }
 }
 
-// Funciones CRUD del panel de Cámaras
+// ===== GESTIÓN DE CÁMARAS =====
 function agregarCamara(e) {
     e.preventDefault();
     const nombre = document.getElementById("cam-nombre").value;
     const url = document.getElementById("cam-url").value;
     const estado = document.getElementById("cam-estado").value;
-
     const tbody = document.getElementById("tabla-camaras-body");
     const badgeClass = estado === "Activa" ? "bg-dark" : "bg-secondary";
 
@@ -514,33 +523,106 @@ function agregarCamara(e) {
         </td>
     `;
     tbody.appendChild(nuevaFila);
-
-    document.getElementById("cam-nombre").value = "";
-    document.getElementById("cam-url").value = "";
-    alert("Cámara registrada con éxito.");
+    e.target.reset();
 }
 
 function eliminarFila(btn) {
-    if (confirm("¿Desea eliminar esta cámara del sistema?")) {
-        btn.closest("tr").remove();
-    }
+    if (confirm("¿Desea eliminar esta cámara?")) btn.closest("tr").remove();
 }
 
+// ===== ACTUALIZACIÓN DINÁMICA DE DASHBOARD Y MARKETING =====
 async function actualizarDatosDashboard() {
     try {
         const res = await fetch("/api/stats");
         if (!res.ok) return;
         const s = await res.json();
 
-        document.getElementById("stat-trafico").innerText = s.trafico || 237;
-        document.getElementById("stat-permanencia").innerText = (s.permanencia_promedio_seg || 16.1) + " s";
-        document.getElementById("stat-interacciones").innerText = s.interacciones || 16;
+        // 1. Cargar KPIs básicos
+        const trafico = s.trafico || 0;
+        const interacciones = s.interacciones || 0;
+        document.getElementById("stat-trafico").innerText = trafico;
+        document.getElementById("stat-permanencia").innerText = (s.permanencia_promedio_seg || 0) + " s";
+        document.getElementById("stat-interacciones").innerText = interacciones;
+        
+        const tasa = trafico > 0 ? ((interacciones / trafico) * 100).toFixed(1) : 0;
+        document.getElementById("stat-conversion").innerText = tasa + "%";
+
+        // 2. Actualizar Lista Top y Tabla Dinámica de Ads/Reels
+        if (s.top_productos && s.top_productos.length > 0) {
+            const listaLista = document.getElementById("lista-productos-datos");
+            const tablaCat = document.getElementById("tabla-catalogo-body");
+            
+            listaLista.innerHTML = "";
+            tablaCat.innerHTML = "";
+
+            s.top_productos.forEach((p, idx) => {
+                listaLista.innerHTML += `
+                <li class="list-group-item bg-transparent border-secondary px-0 d-flex justify-content-between align-items-center text-dark">
+                    <span class="fw-bold"><i class="bi bi-box me-2"></i> ${p.producto}</span>
+                    <span class="badge bg-dark text-white rounded-pill">${p.veces} contactos</span>
+                </li>`;
+
+                let traficoProd = trafico > p.veces ? trafico : p.veces + 10; 
+                let convProd = ((p.veces / traficoProd) * 100).toFixed(1);
+                
+                let badgeCls = "bg-success";
+                let recomendacionTit = "Saturación Orgánica";
+                let recomendacionTxt = "Alto rendimiento en percha. Redirigir presupuesto a otros SKUs.";
+                
+                if (convProd < 10) {
+                    badgeCls = "bg-danger";
+                    recomendacionTit = "Impulso con Reels (Alerta Baja Evacuación)";
+                    recomendacionTxt = `Sugerencia: Lanzar campaña de Reels (<15s) geolocalizada a 2KM para ${p.producto}.`;
+                } else if (convProd >= 10 && convProd < 25) {
+                    badgeCls = "bg-warning text-dark";
+                    recomendacionTit = "Campaña de Tráfico / Retargeting";
+                    recomendacionTxt = `El cliente evalúa pero duda. Lanzar anuncio con cupón digital para ${p.producto}.`;
+                }
+
+                tablaCat.innerHTML += `
+                <tr>
+                    <td class="fw-bold"><i class="bi bi-phone text-muted me-1 small"></i> ${p.producto}</td>
+                    <td class="text-muted">${traficoProd} pasaron</td>
+                    <td>${p.veces} interacciones</td>
+                    <td><span class="badge ${badgeCls} text-white">${convProd}%</span></td>
+                    <td>
+                        <span class="d-block fw-bold small text-dark">${recomendacionTit}</span>
+                        <span class="d-block text-muted small" style="font-size: 0.75rem;">${recomendacionTxt}</span>
+                        <button class="btn btn-outline-dark btn-sm mt-2 py-0 px-2" style="font-size: 0.7rem;" onclick="alert('Campaña generada y exportada para ${p.producto}.')">Exportar Campaña</button>
+                    </td>
+                </tr>`;
+
+                // Sincronizar dinámicamente las tarjetas superiores de la pestaña Marketing con los datos reales
+                if (idx === 0) {
+                    document.getElementById("mkt-card-1-titulo").innerText = `Caso Crítico: ${p.producto}`;
+                    document.getElementById("mkt-card-1-desc").innerHTML = `El sistema detecta baja evacuación (${p.veces} interacciones) a pesar de estar en zona principal.<br><strong>Sugerencia:</strong> Invertir presupuesto bajo objetivo de interacción con Reels cortos de máximo 15 segundos.`;
+                } else if (idx === 1) {
+                    document.getElementById("mkt-card-2-titulo").innerText = `Optimización: ${p.producto}`;
+                    document.getElementById("mkt-card-2-desc").innerHTML = `Alta permanencia pero conversión lenta (${convProd}%).<br><strong>Sugerencia:</strong> Campaña de tráfico con cupón digital de descuento de fin de semana.`;
+                }
+            });
+        }
+
+        // 3. Actualizar Análisis Global
+        if (s.resumen) {
+            document.getElementById("texto-resumen-ia").innerText = s.resumen;
+            document.getElementById("texto-friccion").innerText = `El sistema evaluó ${trafico} registros de tráfico. La conversión actual es del ${tasa}%.`;
+            
+            if (tasa < 15 && trafico > 10) {
+                 document.getElementById("texto-retargeting").innerHTML = `<strong>Oportunidad Pauta:</strong> Alto tráfico pero poca interacción. Ideal para campaña publicitaria agresiva.`;
+                 document.getElementById("texto-retargeting").className = "small text-danger mb-0";
+            } else {
+                 document.getElementById("texto-retargeting").innerText = "El rendimiento orgánico de la zona es favorable. Mantener pauta digital habitual.";
+                 document.getElementById("texto-retargeting").className = "small text-success mb-0";
+            }
+        }
     } catch (e) {}
 }
-setInterval(actualizarDatosDashboard, 6000);
+
+setInterval(actualizarDatosDashboard, 5000);
 actualizarDatosDashboard();
 
-// ===== CHAT CON IA (datos / recomendaciones) =====
+// ===== CHAT CON IA (100% Asíncrono) =====
 function agregarBurbuja(contenedor, autor, texto, tipo) {
     const div = document.createElement("div");
     const esUsuario = tipo === "user";
@@ -567,13 +649,15 @@ async function preguntarIA(e) {
     const btn = document.getElementById("chat-submit");
     const modo = document.getElementById("chat-modo").value;
     const chatMsgs = document.getElementById("chat-messages");
+    
     const msg = input.value.trim();
     if (!msg) return;
 
     agregarBurbuja(chatMsgs, "Tú", msg, "user");
     input.value = "";
     btn.disabled = true;
-    const burbujaIA = agregarBurbuja(chatMsgs, "Kovaq IA", "Analizando datos...", "bot");
+    
+    const burbujaIA = agregarBurbuja(chatMsgs, "Kovaq IA", "Analizando el comportamiento físico para generar estrategias digitales...", "bot");
 
     try {
         const res = await fetch("/api/chat", {
@@ -582,11 +666,12 @@ async function preguntarIA(e) {
             body: JSON.stringify({ mensaje: msg, modo: modo })
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.detail || "Error del servidor (" + res.status + ")");
+        if (!res.ok) throw new Error(data.detail || "Error del servidor");
+        
         burbujaIA.querySelector(".texto").textContent = data.respuesta || "Sin respuesta.";
     } catch (err) {
         burbujaIA.className = "p-2 rounded small mb-2 shadow-sm bg-danger text-white me-auto";
-        burbujaIA.querySelector(".texto").textContent = "No se pudo obtener respuesta: " + err.message;
+        burbujaIA.querySelector(".texto").textContent = "Error de conexión: " + err.message;
     } finally {
         btn.disabled = false;
         input.focus();

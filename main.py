@@ -33,9 +33,6 @@ async def startup_event():
     await init_db()
     if MODO == "local":
         camara.iniciar()
-        camara.cambiar_fuente(os.getenv("FUENTE_INICIAL", "webcam"))
-        from publicador_video import iniciar_publicacion
-        iniciar_publicacion(camara)
 
 # ==========================================
 # MENÚ LATERAL UNIFICADO
@@ -192,11 +189,15 @@ async def api_chat(request: Request):
 
     mensaje = (datos.get("mensaje") or "").strip()
     modo = datos.get("modo", "datos")
+    
     if not mensaje:
         raise HTTPException(status_code=400, detail="El mensaje está vacío")
 
     estado_vivo = camara.estado_dict() if camara else {}
+    
+    # CORRECCIÓN: Llamada asíncrona directa. NO uses asyncio.to_thread aquí.
     respuesta_ia = await preguntar_a_los_datos(mensaje, modo=modo, vivo=estado_vivo)
+    
     return {"respuesta": respuesta_ia}
 
 @app.post("/api/upload")
@@ -285,12 +286,13 @@ def _texto_resumen(s):
 async def api_stats(request: Request):
     await obtener_usuario_actual(request)
     try:
-        s = _obtener_stats()
-    except Exception:
-        raise HTTPException(status_code=500, detail="Error consultando las estadísticas")
-    s["resumen"] = _texto_resumen(s)
+        # CORRECCIÓN: Envía la carga de SQLite a un hilo secundario
+        s = await asyncio.to_thread(_obtener_stats)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error consultando estadísticas")
+    
+    s["resumen"] = await asyncio.to_thread(_texto_resumen, s)
     return s
-
 # ==========================================
 # VIDEO STREAMING (LOCAL)
 # ==========================================

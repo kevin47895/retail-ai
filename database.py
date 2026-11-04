@@ -12,8 +12,32 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def _abrir():
     if TURSO_URL:
+        # La conexión remota a Turso ya maneja su propia concurrencia
         return libsql.connect(database=TURSO_URL, auth_token=TURSO_TOKEN)
-    return libsql.connect(database=DB_LOCAL)
+    
+    # Configuración para la base de datos local (SQLite)
+    conn = libsql.connect(database=DB_LOCAL)
+    
+    # Activa la lectura y escritura simultánea en procesos separados
+    conn.execute("PRAGMA journal_mode=WAL;")
+    # Relaja la sincronización estricta de disco para que YOLO no pierda FPS al hacer INSERTs
+    conn.execute("PRAGMA synchronous=NORMAL;") 
+    
+    return conn
+
+def obtener_rotacion(dias: int):
+    """Consulta la rotación de productos según el período que pida el cliente."""
+    query = """
+        SELECT detalle as producto, COUNT(*) as interacciones 
+        FROM eventos 
+        WHERE tipo = 'interaccion' AND creado >= date('now', ?)
+        GROUP BY detalle 
+        ORDER BY interacciones ASC 
+        LIMIT 5
+    """
+    # Se formatea el string para que SQLite entienda "-5 days", "-15 days", etc.
+    modificador_fecha = f"-{dias} days"
+    return leer(query, (modificador_fecha,))
 
 def leer(query: str, params: tuple = (), uno: bool = False):
     conn = _abrir()
