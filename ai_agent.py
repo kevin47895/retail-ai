@@ -6,7 +6,7 @@ import time
 from dotenv import load_dotenv
 from groq import AsyncGroq
 
-from database import leer
+from database import leer, obtener_stats_por_franja, obtener_productos_por_franja, obtener_perfil_permanencia, obtener_datos_publicidad
 
 load_dotenv()
 log = logging.getLogger("kovaq.ia")
@@ -49,6 +49,62 @@ def _obtener_datos_base() -> dict:
     return d
 
 
+def _obtener_contexto_avanzado() -> str:
+    """Genera contexto enriquecido con franjas, perfiles y publicidad para el LLM."""
+    partes = []
+    try:
+        franjas = {}
+        raw = obtener_stats_por_franja(7)
+        for franja, tipo, total, prom in raw:
+            franjas.setdefault(franja, {})
+            if tipo == "trafico":
+                franjas[franja]["trafico"] = total
+            elif tipo == "interaccion":
+                franjas[franja]["interacciones"] = total
+            elif tipo == "permanencia":
+                franjas[franja]["permanencia"] = round(float(prom), 1)
+        if franjas:
+            resumen = "; ".join(
+                f"{f.capitalize()}: {v.get('trafico',0)} personas, {v.get('interacciones',0)} interacciones, {v.get('permanencia',0)}s permanencia"
+                for f, v in franjas.items()
+            )
+            partes.append(f"Análisis por franja (últimos 7 días): {resumen}.")
+    except Exception:
+        pass
+
+    try:
+        prods_franja = obtener_productos_por_franja(7)
+        resumen_prods = {}
+        for franja, producto, inter in prods_franja:
+            resumen_prods.setdefault(franja, []).append(f"{producto}({inter})")
+        if resumen_prods:
+            txt = "; ".join(f"{f}: {', '.join(ps[:3])}" for f, ps in resumen_prods.items())
+            partes.append(f"Productos top por franja: {txt}.")
+    except Exception:
+        pass
+
+    try:
+        perfiles = obtener_perfil_permanencia(7)
+        if perfiles:
+            txt = ", ".join(f"{p[0]}: {p[1]} casos ({p[2]}s promedio)" for p in perfiles)
+            partes.append(f"Perfiles de cliente por permanencia: {txt}.")
+    except Exception:
+        pass
+
+    try:
+        pub = obtener_datos_publicidad(None, 7)
+        if pub["top_productos"]:
+            tasa = (sum(p["interacciones"] for p in pub["top_productos"]) / pub["trafico"] * 100) if pub["trafico"] else 0
+            partes.append(
+                f"Publicidad: Tasa de conversión global={tasa:.1f}%, "
+                f"permanencia promedio={pub['permanencia_promedio']}s."
+            )
+    except Exception:
+        pass
+
+    return " ".join(partes)
+
+
 def puente_analisis_intermedio(pregunta: str, modo: str, d: dict) -> str:
     """
     Puente tolerante a errores de escritura para capturar consultas comunes
@@ -73,6 +129,51 @@ def puente_analisis_intermedio(pregunta: str, modo: str, d: dict) -> str:
         top_str = ", ".join(d['productos'])
         return f"📦 Analizando el flujo de la percha, los artículos con mayor interacción física son: {top_str}. ¿Te gustaría que diseñe una campaña digital o de Meta Ads enfocada en ellos?"
 
+    # Consultas sobre horarios / franjas
+    if any(w in p for w in ["mañana", "manana", "tarde", "noche", "horario", "franja", "turno"]):
+        try:
+            franjas = {}
+            raw = obtener_stats_por_franja(7)
+            for franja, tipo, total, prom in raw:
+                franjas.setdefault(franja, {})
+                if tipo == "trafico":
+                    franjas[franja]["trafico"] = total
+                elif tipo == "interaccion":
+                    franjas[franja]["interacciones"] = total
+            if franjas:
+                partes_f = []
+                for f, v in franjas.items():
+                    emoji = {"manana": "🌅", "tarde": "☀️", "noche": "🌙"}.get(f, "📊")
+                    partes_f.append(f"{emoji} {f.capitalize()}: {v.get('trafico',0)} personas, {v.get('interacciones',0)} interacciones")
+                return "📊 Actividad por franja horaria (últimos 7 días):\n" + "\n".join(partes_f)
+        except Exception:
+            pass
+
+    # Consultas sobre perfiles de cliente
+    if any(w in p for w in ["perfil", "tipo de cliente", "express", "explorador", "decisor", "comportamiento"]):
+        try:
+            perfiles = obtener_perfil_permanencia(7)
+            if perfiles:
+                partes_p = [f"• {p[0]}: {p[1]} clientes (promedio {p[2]}s)" for p in perfiles]
+                return "👤 Perfiles de cliente por permanencia (últimos 7 días):\n" + "\n".join(partes_p)
+        except Exception:
+            pass
+
+    # Consultas sobre publicidad o promociones
+    if any(w in p for w in ["promoci", "publicidad", "campaña", "pauta", "ads", "reel", "meta"]):
+        try:
+            pub = obtener_datos_publicidad(None, 7)
+            if pub["top_productos"]:
+                prods = ", ".join(p["producto"] for p in pub["top_productos"][:3])
+                return (
+                    f"📢 Sugerencia publicitaria basada en datos reales:\n"
+                    f"Los productos con más interacción son: {prods}.\n"
+                    f"Permanencia promedio: {pub['permanencia_promedio']}s. "
+                    f"Recomendación: campaña de Reels cortos enfocados en estos artículos."
+                )
+        except Exception:
+            pass
+
     return None
 
 
@@ -90,12 +191,20 @@ async def preguntar_a_los_datos(pregunta: str, modo: str = "datos", vivo: dict |
     if respuesta_directa:
         return respuesta_directa
 
-    # 2. Contexto conversacional para la IA en Groq
+    # 2. Contexto conversacional para la IA en Groq (ENRIQUECIDO con analítica avanzada)
+    avanzado = await asyncio.to_thread(_obtener_contexto_avanzado)
     contexto = (
-        f"Eres Kovaq IA, un asistente experto en Retail Analytics y marketing in-store. "
+        "Eres Kovaq IA, un asistente experto en Retail Analytics, marketing in-store y publicidad digital (Meta Ads, Reels, Google Ads). "
         f"Datos actuales de las perchas: Tráfico={d['trafico']}, Permanencia={d['permanencia']}s, "
         f"Interacciones={d['interacciones']}, Top productos={', '.join(d['productos'])}.\n"
-        f"Modo actual: {modo}. Responde de forma sumamente interactiva, amigable y directa en español (máximo 3 líneas), adaptándote a lo que el usuario pregunta."
+        f"{avanzado}\n"
+        "Capacidades avanzadas: Puedes analizar por FRANJAS HORARIAS (mañana 6-12h, tarde 12-18h, noche 18-6h), "
+        "PERFILES DE CLIENTE (Express <5s, Explorador 5-15s, Interesado 15-30s, Decisor 30s+), "
+        "y generar SUGERENCIAS DE PUBLICIDAD DINÁMICA cruzando permanencia, conversión y franja horaria. "
+        "Si el usuario pregunta qué promoción poner en una franja específica, genera una recomendación concreta "
+        "con tipo de campaña, presupuesto estimado y producto sugerido.\n"
+        f"Modo actual: {modo}. Responde de forma sumamente interactiva, amigable y directa en español (máximo 5 líneas), "
+        "adaptándote a lo que el usuario pregunta. Usa emojis moderadamente."
     )
 
     for modelo in PREFERIDOS:

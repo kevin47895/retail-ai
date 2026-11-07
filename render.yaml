@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: kovaq-retail-analytics
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: MODO
+        value: nube
+      - key: YOLO_IMGSZ
+        value: "256"
+      - key: YOLO_INTERVALO
+        value: "0.04"
+      - key: YOLO_CONF
+        value: "0.28"

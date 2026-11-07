@@ -3,135 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso - Kovaq Analytics</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <title>Acceso Seguro • KOVAQ Analytics</title>
+    <!-- Google Fonts: Space Grotesk, Inter, JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        kovaq: {
+                            navy: '#0C2340',      /* 60% Color de fondo y estructura */
+                            navyDark: '#08172b',
+                            card: '#FFFFFF',      /* 25% Contenedor central blanco */
+                            orange: '#FE5000',    /* 15% Acento de acción principal */
+                            orangeHover: '#E04700',
+                            border: '#E3E7ED',
+                            slate: '#475569',
+                            muted: '#64748B'
+                        }
+                    },
+                    fontFamily: {
+                        title: ['"Space Grotesk"', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    },
+                    borderRadius: {
+                        'kovaq': '22px',
+                        'pill': '99px'
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            /* Mismas variables claras del dashboard */
-            --bw-bg: #ffffff;
-            --bw-card: #f9fafb;
-            --bw-border: #e5e7eb;
-            --bw-text-main: #111827;
-            --bw-text-muted: #6b7280;
-            --bw-black: #000000;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0C2340;
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(254, 80, 0, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(37, 99, 235, 0.08) 0%, transparent 40%);
         }
-
-        body { 
-            background-color: var(--bw-bg); 
-            color: var(--bw-text-main);
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 100vh;
-            margin: 0;
-            padding: 16px;
-        }
-        
-        .login-card { 
-            max-width: 400px; 
-            width: 100%; 
-            padding: 32px; 
-            border-radius: 12px; 
-            background-color: var(--bw-card); 
-            border: 1px solid var(--bw-border);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-
-        .form-control, .input-group-text, .btn-outline-secondary {
-            background-color: #ffffff !important;
-            border-color: var(--bw-border) !important;
-            color: var(--bw-text-main) !important;
-        }
-
-        .form-control:focus {
-            border-color: var(--bw-black) !important;
-            box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.1);
-        }
-        
-        .form-control::placeholder {
-            color: var(--bw-text-muted) !important;
-        }
-
-        .text-secondary-custom {
-            color: var(--bw-text-muted) !important;
-        }
-
-        /* Botón negro estilo minimalista */
-        .btn-kovaq {
-            background-color: var(--bw-black);
-            color: #ffffff;
-            border: 1px solid var(--bw-black);
-            transition: all 0.2s ease;
-        }
-        
-        .btn-kovaq:hover {
-            background-color: #374151;
-            color: #ffffff;
-        }
-
-        .icon-container {
-            width: 56px; 
-            height: 56px;
-            background-color: #ffffff;
-            border: 1px solid var(--bw-border);
-            color: var(--bw-black);
-        }
+        .font-title { font-family: 'Space Grotesk', sans-serif; }
+        .font-mono-num { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
-<body>
-    <div class="login-card">
-        <div class="text-center mb-4">
-            <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3 icon-container shadow-sm">
-                <i class="bi bi-cpu fs-2"></i>
+<body class="min-h-screen flex items-center justify-center p-4 antialiased selection:bg-kovaq-orange selection:text-white">
+
+    <main class="w-full max-w-md my-auto">
+        <!-- Tarjeta Central de Inicio de Sesión (25% Blanco) -->
+        <div class="bg-white rounded-kovaq p-8 sm:p-10 shadow-2xl border border-kovaq-border relative overflow-hidden">
+            
+            <!-- Acento decorativo sutil superior -->
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-kovaq-orange via-orange-400 to-kovaq-navy"></div>
+
+            <!-- Cabecera de la Marca -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-kovaq-navy text-white mb-3 shadow-md shadow-kovaq-navy/20">
+                    <i class="bi bi-cpu text-2xl text-kovaq-orange"></i>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-kovaq-navy tracking-tight font-title m-0">
+                    KOVAQ <span class="text-kovaq-orange">Analytics</span>
+                </h1>
+                <p class="text-xs text-kovaq-slate mt-1.5 font-medium">
+                    Panel de Control y Analítica de Percha
+                </p>
             </div>
-            <h3 class="fw-bold m-0" style="color: var(--bw-text-main);">Kovaq IA</h3>
-            <p class="text-secondary-custom small mt-1">Sistema de Analítica Retail</p>
-        </div>
 
-        {% if error %}
-        <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger py-2 small rounded mb-3" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ error }}
-        </div>
-        {% endif %}
-
-        <form method="POST" action="/login">
-            <div class="mb-3">
-                <label class="form-label small fw-bold text-secondary-custom">Usuario</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-person text-secondary-custom"></i></span>
-                    <input type="text" class="form-control" name="username" placeholder="Ingrese su usuario" required autofocus>
+            <!-- Feedback de Error -->
+            {% if error %}
+            <div class="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2.5" role="alert">
+                <i class="bi bi-exclamation-triangle-fill text-red-500 text-base shrink-0 mt-0.5"></i>
+                <div>
+                    <span class="font-bold block text-red-800">Error de Autenticación</span>
+                    <span>{{ error }}</span>
                 </div>
             </div>
-            
-            <div class="mb-4">
-                <label class="form-label small fw-bold text-secondary-custom">Contraseña</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-lock text-secondary-custom"></i></span>
-                    <input type="password" class="form-control" name="password" id="passwordInput" placeholder="••••••••" required>
-                    <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePassword">
-                        <i class="bi bi-eye text-secondary-custom" id="eyeIcon"></i>
+            {% endif %}
+
+            <!-- Formulario de Acceso -->
+            <form method="POST" action="/login" class="space-y-5" autocomplete="on">
+                
+                <!-- Campo: Correo Electrónico -->
+                <div>
+                    <label for="username" class="block text-xs font-bold text-kovaq-navy uppercase tracking-wider mb-2">
+                        <i class="bi bi-envelope text-kovaq-orange mr-1"></i> Correo Electrónico o Usuario
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            required 
+                            autofocus 
+                            placeholder="Ingrese su correo o usuario" 
+                            class="w-full pl-4 pr-10 py-3 text-sm text-kovaq-navy bg-slate-50 border-2 border-kovaq-border rounded-xl focus:bg-white focus:border-kovaq-navy focus:outline-none transition-all placeholder:text-kovaq-muted font-medium"
+                        >
+                        <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-kovaq-muted">
+                            <i class="bi bi-person"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Campo: Contraseña -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label for="passwordInput" class="block text-xs font-bold text-kovaq-navy uppercase tracking-wider">
+                            <i class="bi bi-lock text-kovaq-orange mr-1"></i> Contraseña
+                        </label>
+                        <span class="text-[11px] text-kovaq-muted font-mono-num font-medium">Seguridad SSL</span>
+                    </div>
+                    <div class="relative">
+                        <input 
+                            type="password" 
+                            id="passwordInput" 
+                            name="password" 
+                            required 
+                            placeholder="••••••••••••" 
+                            class="w-full pl-4 pr-11 py-3 text-sm text-kovaq-navy bg-slate-50 border-2 border-kovaq-border rounded-xl focus:bg-white focus:border-kovaq-navy focus:outline-none transition-all placeholder:text-kovaq-muted font-mono-num"
+                        >
+                        <button 
+                            type="button" 
+                            id="togglePassword" 
+                            class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-kovaq-muted hover:text-kovaq-navy transition-colors rounded-lg focus:outline-none" 
+                            title="Mostrar u ocultar contraseña"
+                            aria-label="Mostrar contraseña"
+                        >
+                            <i class="bi bi-eye text-base" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botón Principal: Naranja KOVAQ (15% Acento) -->
+                <div class="pt-2">
+                    <button 
+                        type="submit" 
+                        class="w-full min-h-[48px] py-3 px-6 rounded-pill bg-kovaq-orange hover:bg-kovaq-orangeHover text-white font-title text-sm font-bold tracking-wide shadow-lg shadow-kovaq-orange/30 hover:shadow-kovaq-orange/40 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                    >
+                        <span>Iniciar Sesión</span>
+                        <i class="bi bi-arrow-right"></i>
                     </button>
                 </div>
-            </div>
+            </form>
 
-            <button type="submit" class="btn btn-kovaq w-100 py-2 fw-bold shadow-sm">
-                Iniciar Sesión
-            </button>
-        </form>
-    </div>
+        </div>
+    </main>
 
+    <!-- Script de Visibilidad de Contraseña -->
     <script>
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('passwordInput');
         const eyeIcon = document.getElementById('eyeIcon');
 
-        togglePassword.addEventListener('click', function () {
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            eyeIcon.classList.toggle('bi-eye');
-            eyeIcon.classList.toggle('bi-eye-slash');
-        });
+        if (togglePassword && passwordInput && eyeIcon) {
+            togglePassword.addEventListener('click', function () {
+                const isPassword = passwordInput.getAttribute('type') === 'password';
+                passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+                eyeIcon.classList.toggle('bi-eye', !isPassword);
+                eyeIcon.classList.toggle('bi-eye-slash', isPassword);
+                this.setAttribute('aria-label', isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña');
+            });
+        }
     </script>
 </body>
 </html>

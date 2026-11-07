@@ -7,8 +7,9 @@ from fastapi import FastAPI, Request, Form, HTTPException, status, WebSocket, We
 from fastapi.responses import RedirectResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from database import init_db, leer, escribir, pwd_context
+from database import init_db, init_analytics, leer, escribir, pwd_context
 from ai_agent import preguntar_a_los_datos
+from analytics import router as analytics_router
 
 SECRET_KEY = os.getenv("JWT_SECRET", "cambiar_esto_en_produccion")
 ALGORITHM = "HS256"
@@ -23,16 +24,26 @@ else:
 ROLES_GESTION = ["admin", "admin_tecnico", "dueno"]
 
 app = FastAPI(title="Kovaq Retail Analytics")
+app.include_router(analytics_router)
 
 # Montaje de carpeta para archivos estáticos (aquí va tu video demo.mp4)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEMO_VIDEO = os.path.join(BASE_DIR, "static", "demo_supermercado.mp4")
+
 @app.on_event("startup")
 async def startup_event():
     await init_db()
+    await init_analytics()
     if MODO == "local":
         camara.iniciar()
+        # Asegurar que arranque inmediatamente con el video de demostración para evitar pantalla negra
+        if os.path.exists(DEMO_VIDEO):
+            camara.cambiar_fuente("video", DEMO_VIDEO)
+        else:
+            camara.cambiar_fuente("webcam")
 
 # ==========================================
 # MENÚ LATERAL UNIFICADO
@@ -73,9 +84,10 @@ async def login_page(request: Request, error: str = None):
 
 @app.post("/login")
 async def login_action(request: Request, username: str = Form(...), password: str = Form(...)):
+    user_clean = (username or "").strip()
     usuario = leer(
-        "SELECT u.id, u.username, u.password_hash, u.nombre_completo, r.nombre FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.username = ?",
-        (username,), uno=True
+        "SELECT u.id, u.username, u.password_hash, u.nombre_completo, r.nombre FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE LOWER(u.username) = LOWER(?)",
+        (user_clean,), uno=True
     )
     if not usuario or not pwd_context.verify(password, usuario[2]):
         return templates.TemplateResponse(request, "login.html", {
@@ -246,12 +258,19 @@ async def cambiar_fuente_api(request: Request):
     if camara is None:
         raise HTTPException(status_code=503, detail="Cambio de fuente solo disponible en modo local")
     datos = await request.json()
-    tipo = datos.get("tipo", "webcam")
+    tipo = datos.get("tipo", "video")
     if tipo not in ("webcam", "rtsp", "video", "imagen", "apagado"):
         raise HTTPException(status_code=400, detail="Fuente no válida")
-    rutas = {"video": "uploads/demo.mp4", "imagen": "uploads/demo.jpg"}
-    camara.cambiar_fuente(tipo, rutas.get(tipo, ""))
-    return {"ok": True}
+    
+    ruta = datos.get("ruta")
+    if not ruta:
+        rutas = {
+            "video": DEMO_VIDEO if os.path.exists(DEMO_VIDEO) else "static/demo_supermercado.mp4",
+            "imagen": "static/demo.jpg" if os.path.exists("static/demo.jpg") else "uploads/demo.jpg"
+        }
+        ruta = rutas.get(tipo, "")
+    camara.cambiar_fuente(tipo, ruta)
+    return {"ok": True, "tipo": tipo, "ruta": ruta}
 
 # ==========================================
 # ESTADÍSTICAS
@@ -259,14 +278,18 @@ async def cambiar_fuente_api(request: Request):
 def _obtener_stats():
     trafico = leer("SELECT COUNT(*) FROM eventos WHERE tipo = 'trafico'", uno=True)[0]
     perm = leer("SELECT COUNT(*), COALESCE(AVG(valor), 0) FROM eventos WHERE tipo = 'permanencia'", uno=True)
-    inter = leer("SELECT COUNT(*) FROM eventos WHERE tipo = 'interaccion'", uno=True)[0]
-    top = leer("""SELECT detalle, COUNT(*) FROM eventos WHERE tipo = 'interaccion'
+    inter = leer("SELECT COUNT(*) FROM eventos WHERE tipo IN ('interaccion', 'producto_tomado')", uno=True)[0]
+    tomados = leer("SELECT COUNT(*) FROM eventos WHERE tipo = 'producto_tomado'", uno=True)[0]
+    devueltos = leer("SELECT COUNT(*) FROM eventos WHERE tipo = 'producto_devuelto'", uno=True)[0]
+    top = leer("""SELECT detalle, COUNT(*) FROM eventos WHERE tipo IN ('interaccion', 'producto_tomado')
                   GROUP BY detalle ORDER BY COUNT(*) DESC LIMIT 5""")
     return {
         "trafico": trafico,
         "permanencia_eventos": perm[0],
         "permanencia_promedio_seg": round(float(perm[1]), 1),
         "interacciones": inter,
+        "tomados": tomados,
+        "devueltos": devueltos,
         "top_productos": [{"producto": p[0], "veces": p[1]} for p in top],
     }
 
@@ -293,6 +316,23 @@ async def api_stats(request: Request):
     
     s["resumen"] = await asyncio.to_thread(_texto_resumen, s)
     return s
+
+@app.get("/api/live_events")
+async def api_live_events(request: Request):
+    await obtener_usuario_actual(request)
+    if camara is None:
+        return {
+            "fps_cam": 0,
+            "fps_yolo": 0,
+            "latencia_ms": 0,
+            "agarrados": 0,
+            "devueltos": 0,
+            "entradas": 0,
+            "personas_activas": 0,
+            "estado": "apagado",
+            "eventos": []
+        }
+    return camara.obtener_telemetria()
 # ==========================================
 # VIDEO STREAMING (LOCAL)
 # ==========================================

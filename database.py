@@ -97,8 +97,210 @@ def guardar_trafico():
 def guardar_interaccion(producto: str):
     escribir("INSERT INTO eventos (tipo, detalle) VALUES ('interaccion', ?)", (producto,))
 
+def guardar_producto_tomado(producto: str, cliente_id: int = None):
+    detalle = f"{producto} (Cliente #{cliente_id})" if cliente_id else producto
+    escribir("INSERT INTO eventos (tipo, detalle, valor) VALUES ('producto_tomado', ?, ?)", (detalle, float(cliente_id or 0)))
+    escribir("INSERT INTO eventos (tipo, detalle) VALUES ('interaccion', ?)", (producto,))
+
+def guardar_producto_devuelto(producto: str, cliente_id: int = None):
+    detalle = f"{producto} (Cliente #{cliente_id})" if cliente_id else producto
+    escribir("INSERT INTO eventos (tipo, detalle, valor) VALUES ('producto_devuelto', ?, ?)", (detalle, float(cliente_id or 0)))
+
 def guardar_permanencia(segundos: float):
     escribir("INSERT INTO eventos (tipo, valor) VALUES ('permanencia', ?)", (segundos,))
 
 async def init_db():
     await asyncio.to_thread(init_db_sync)
+
+
+# ==========================================
+# MÓDULO DE ANALÍTICA AVANZADA (v2)
+# ==========================================
+
+def init_analytics_sync():
+    """Inicializa tablas para categorización de productos. No altera tablas existentes."""
+    conn = _abrir()
+    try:
+        conn.execute("""CREATE TABLE IF NOT EXISTS categorias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE)""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS producto_categoria (
+            producto TEXT,
+            categoria_id INTEGER,
+            FOREIGN KEY(categoria_id) REFERENCES categorias(id),
+            UNIQUE(producto, categoria_id))""")
+        cats = {
+            "Bebidas": ["bottle", "cup", "wine glass"],
+            "Frutas": ["banana", "apple", "orange"],
+            "Electrónica": ["cell phone", "laptop", "remote"],
+            "Snacks": ["cake", "donut", "sandwich", "hot dog", "pizza"]
+        }
+        for cat, prods in cats.items():
+            conn.execute("INSERT OR IGNORE INTO categorias (nombre) VALUES (?)", (cat,))
+            row = conn.execute("SELECT id FROM categorias WHERE nombre = ?", (cat,)).fetchone()
+            if row:
+                for p in prods:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO producto_categoria (producto, categoria_id) VALUES (?, ?)",
+                        (p, row[0])
+                    )
+        conn.commit()
+    finally:
+        conn.close()
+
+async def init_analytics():
+    await asyncio.to_thread(init_analytics_sync)
+
+
+# --- Heatmap: tráfico por hora del día ---
+def obtener_heatmap_hora(dias=7):
+    return leer("""
+        SELECT strftime('%H', creado) as hora, COUNT(*) as total
+        FROM eventos WHERE tipo = 'trafico' AND creado >= datetime('now', ?)
+        GROUP BY hora ORDER BY hora
+    """, (f"-{dias} days",))
+
+
+# --- Heatmap: matriz día-de-semana × hora ---
+def obtener_heatmap_dia_hora(dias=30):
+    return leer("""
+        SELECT strftime('%w', creado) as dia, strftime('%H', creado) as hora, COUNT(*) as total
+        FROM eventos WHERE tipo = 'trafico' AND creado >= datetime('now', ?)
+        GROUP BY dia, hora
+    """, (f"-{dias} days",))
+
+
+# --- Interacciones agrupadas por hora y producto ---
+def obtener_interacciones_por_hora(dias=7):
+    return leer("""
+        SELECT strftime('%H', creado) as hora, detalle as producto, COUNT(*) as total
+        FROM eventos WHERE tipo = 'interaccion' AND creado >= datetime('now', ?)
+        GROUP BY hora, producto ORDER BY hora, total DESC
+    """, (f"-{dias} days",))
+
+
+# --- Top productos por cantidad de interacciones ---
+def obtener_top_productos(limite=10, dias=30):
+    return leer("""
+        SELECT detalle as producto, COUNT(*) as interacciones
+        FROM eventos WHERE tipo = 'interaccion' AND creado >= datetime('now', ?)
+        GROUP BY producto ORDER BY interacciones DESC LIMIT ?
+    """, (f"-{dias} days", limite))
+
+
+# --- Búsqueda de productos por nombre parcial ---
+def buscar_productos(termino):
+    return leer("""
+        SELECT detalle as producto, COUNT(*) as interacciones
+        FROM eventos WHERE tipo = 'interaccion' AND LOWER(detalle) LIKE LOWER(?)
+        GROUP BY producto ORDER BY interacciones DESC
+    """, (f"%{termino}%",))
+
+
+# --- Categorías con productos y conteo ---
+def obtener_categorias_con_productos():
+    return leer("""
+        SELECT c.nombre as categoria, pc.producto,
+               COALESCE(cnt.total, 0) as interacciones
+        FROM categorias c
+        LEFT JOIN producto_categoria pc ON c.id = pc.categoria_id
+        LEFT JOIN (
+            SELECT detalle, COUNT(*) as total
+            FROM eventos WHERE tipo = 'interaccion' GROUP BY detalle
+        ) cnt ON pc.producto = cnt.detalle
+        ORDER BY c.nombre, interacciones DESC
+    """)
+
+
+# --- Estadísticas segmentadas por franja horaria ---
+def obtener_stats_por_franja(dias=7):
+    return leer("""
+        SELECT
+            CASE
+                WHEN CAST(strftime('%H', creado) AS INTEGER) BETWEEN 6 AND 11  THEN 'manana'
+                WHEN CAST(strftime('%H', creado) AS INTEGER) BETWEEN 12 AND 17 THEN 'tarde'
+                ELSE 'noche'
+            END as franja,
+            tipo,
+            COUNT(*) as total,
+            COALESCE(AVG(CASE WHEN tipo = 'permanencia' THEN valor END), 0) as prom
+        FROM eventos WHERE creado >= datetime('now', ?)
+        GROUP BY franja, tipo
+    """, (f"-{dias} days",))
+
+
+# --- Productos más interactuados por franja ---
+def obtener_productos_por_franja(dias=7):
+    return leer("""
+        SELECT
+            CASE
+                WHEN CAST(strftime('%H', creado) AS INTEGER) BETWEEN 6 AND 11  THEN 'manana'
+                WHEN CAST(strftime('%H', creado) AS INTEGER) BETWEEN 12 AND 17 THEN 'tarde'
+                ELSE 'noche'
+            END as franja,
+            detalle as producto, COUNT(*) as interacciones
+        FROM eventos
+        WHERE tipo = 'interaccion' AND creado >= datetime('now', ?)
+        GROUP BY franja, producto ORDER BY franja, interacciones DESC
+    """, (f"-{dias} days",))
+
+
+# --- Perfiles de comportamiento basados en permanencia ---
+def obtener_perfil_permanencia(dias=7):
+    return leer("""
+        SELECT
+            CASE
+                WHEN valor < 5  THEN 'Express (<5s)'
+                WHEN valor < 15 THEN 'Explorador (5-15s)'
+                WHEN valor < 30 THEN 'Interesado (15-30s)'
+                ELSE 'Decisor (30s+)'
+            END as perfil,
+            COUNT(*) as cantidad,
+            ROUND(AVG(valor), 1) as promedio_seg
+        FROM eventos
+        WHERE tipo = 'permanencia' AND creado >= datetime('now', ?)
+        GROUP BY perfil ORDER BY promedio_seg
+    """, (f"-{dias} days",))
+
+
+# --- Tendencia diaria (tráfico, interacciones, permanencia) ---
+def obtener_tendencia_diaria(dias=14):
+    return leer("""
+        SELECT date(creado) as fecha,
+            SUM(CASE WHEN tipo = 'trafico'     THEN 1 ELSE 0 END) as trafico,
+            SUM(CASE WHEN tipo = 'interaccion'  THEN 1 ELSE 0 END) as interacciones,
+            ROUND(AVG(CASE WHEN tipo = 'permanencia' THEN valor END), 1) as prom
+        FROM eventos WHERE creado >= datetime('now', ?)
+        GROUP BY fecha ORDER BY fecha
+    """, (f"-{dias} days",))
+
+
+# --- Datos cruzados para publicidad dinámica ---
+def obtener_datos_publicidad(franja=None, dias=7):
+    mod = f"-{dias} days"
+    franja_sql = {
+        'manana': "AND CAST(strftime('%H', creado) AS INTEGER) BETWEEN 6 AND 11",
+        'tarde':  "AND CAST(strftime('%H', creado) AS INTEGER) BETWEEN 12 AND 17",
+        'noche':  "AND (CAST(strftime('%H', creado) AS INTEGER) >= 18 OR CAST(strftime('%H', creado) AS INTEGER) < 6)"
+    }
+    extra = franja_sql.get(franja, "")
+
+    trafico = leer(
+        f"SELECT COUNT(*) FROM eventos WHERE tipo = 'trafico' AND creado >= datetime('now', ?) {extra}",
+        (mod,), uno=True
+    )[0]
+    perm = leer(
+        f"SELECT COALESCE(AVG(valor),0), COUNT(*) FROM eventos WHERE tipo = 'permanencia' AND creado >= datetime('now', ?) {extra}",
+        (mod,), uno=True
+    )
+    top = leer(
+        f"SELECT detalle, COUNT(*) FROM eventos WHERE tipo = 'interaccion' AND creado >= datetime('now', ?) {extra} GROUP BY detalle ORDER BY COUNT(*) DESC LIMIT 5",
+        (mod,)
+    )
+    return {
+        "trafico": trafico,
+        "permanencia_promedio": round(float(perm[0]), 1),
+        "permanencia_eventos": perm[1],
+        "top_productos": [{"producto": p[0], "interacciones": p[1]} for p in top] if top else [],
+        "franja": franja or "todas"
+    }
