@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 from passlib.context import CryptContext
 import asyncio
 
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
 TURSO_URL = os.getenv("TURSO_URL", "").strip()
 TURSO_TOKEN = os.getenv("TURSO_TOKEN", "").strip()
 DB_LOCAL = os.getenv("DB_LOCAL", "kovaq_local.db")
@@ -25,18 +27,38 @@ def _abrir():
     
     return conn
 
-def obtener_rotacion(dias: int):
-    """Consulta la rotación de productos según el período que pida el cliente."""
+def obtener_rotacion(dias: int = 30):
+    """Consulta la rotación de productos según el período solicitado.
+    Devuelve los productos con menor interacción/tomas en el piso de ventas."""
+    modificador_fecha = f"-{dias} days"
+    
+    # 1. Cruzar producto_categoria con eventos para detectar productos con 0 o pocas interacciones
+    query_catalogo = """
+        SELECT pc.producto, COUNT(e.id) as interacciones
+        FROM producto_categoria pc
+        LEFT JOIN eventos e ON LOWER(e.detalle) = LOWER(pc.producto)
+            AND e.tipo IN ('interaccion', 'producto_tomado')
+            AND e.creado >= datetime('now', ?)
+        GROUP BY pc.producto
+        ORDER BY interacciones ASC, pc.producto ASC
+        LIMIT 6
+    """
+    try:
+        filas = leer(query_catalogo, (modificador_fecha,))
+        if filas and len(filas) > 0:
+            return filas
+    except Exception:
+        pass
+
+    # 2. Respaldo directo en tabla eventos
     query = """
         SELECT detalle as producto, COUNT(*) as interacciones 
         FROM eventos 
-        WHERE tipo = 'interaccion' AND creado >= date('now', ?)
+        WHERE tipo IN ('interaccion', 'producto_tomado') AND creado >= datetime('now', ?)
         GROUP BY detalle 
         ORDER BY interacciones ASC 
-        LIMIT 5
+        LIMIT 6
     """
-    # Se formatea el string para que SQLite entienda "-5 days", "-15 days", etc.
-    modificador_fecha = f"-{dias} days"
     return leer(query, (modificador_fecha,))
 
 def leer(query: str, params: tuple = (), uno: bool = False):
@@ -109,6 +131,44 @@ def guardar_producto_devuelto(producto: str, cliente_id: int = None):
 def guardar_permanencia(segundos: float):
     escribir("INSERT INTO eventos (tipo, valor) VALUES ('permanencia', ?)", (segundos,))
 
+# ==========================================
+# GESTIÓN Y BLINDAJE DE USUARIOS (IAM)
+# ==========================================
+def obtener_usuario_por_id(usuario_id: int):
+    """Consulta detalles de un usuario específico por su identificador primario."""
+    return leer(
+        "SELECT u.id, u.username, u.nombre_completo, u.rol_id, r.nombre, u.estado "
+        "FROM usuarios u JOIN roles r ON u.rol_id = r.id WHERE u.id = ?",
+        (usuario_id,), uno=True
+    )
+
+def contar_administradores_activos() -> int:
+    """Verifica cuántos administradores activos existen para evitar orfandad del sistema."""
+    res = leer(
+        "SELECT COUNT(*) FROM usuarios u "
+        "JOIN roles r ON u.rol_id = r.id "
+        "WHERE LOWER(r.nombre) IN ('admin', 'admin_tecnico', 'dueno') AND u.estado = 'activo'",
+        uno=True
+    )
+    return res[0] if res else 0
+
+def actualizar_usuario(usuario_id: int, nombre: str, rol_id: int, estado: str, password_hash: str = None):
+    """Actualiza datos del usuario, su rol, su estado y opcionalmente su credencial hash."""
+    if password_hash:
+        escribir(
+            "UPDATE usuarios SET nombre_completo = ?, rol_id = ?, estado = ?, password_hash = ? WHERE id = ?",
+            (nombre.strip(), rol_id, estado, password_hash, usuario_id)
+        )
+    else:
+        escribir(
+            "UPDATE usuarios SET nombre_completo = ?, rol_id = ?, estado = ? WHERE id = ?",
+            (nombre.strip(), rol_id, estado, usuario_id)
+        )
+
+def cambiar_estado_usuario(usuario_id: int, nuevo_estado: str):
+    """Alterna el estado operativo de la cuenta (activo/inactivo)."""
+    escribir("UPDATE usuarios SET estado = ? WHERE id = ?", (nuevo_estado, usuario_id))
+
 async def init_db():
     await asyncio.to_thread(init_db_sync)
 
@@ -130,7 +190,8 @@ def init_analytics_sync():
             FOREIGN KEY(categoria_id) REFERENCES categorias(id),
             UNIQUE(producto, categoria_id))""")
         cats = {
-            "Bebidas": ["bottle", "cup", "wine glass"],
+            "Limpieza": ["detergente líquido", "desinfectante", "jabón", "lavavajillas"],
+            "Bebidas": ["bottle", "cup", "wine glass", "gaseosa", "agua"],
             "Frutas": ["banana", "apple", "orange"],
             "Electrónica": ["cell phone", "laptop", "remote"],
             "Snacks": ["cake", "donut", "sandwich", "hot dog", "pizza"]

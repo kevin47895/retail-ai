@@ -12,10 +12,15 @@ __pycache__/
 # Archivos subidos y bases de datos locales
 uploads/
 *.db
-
+AUDITORIA_VULNERABILIDADES.md
+INFORME_OPTIMIZACION.md
+AUDITORIA*.md
+INFORME*.md
+*.audit.md
 # Configuración personal de VS Code
 .vscode/
 
 # Archivos de bloqueo y configuración local
 .lock
 .runtimeconfig.json
+

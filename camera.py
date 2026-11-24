@@ -50,6 +50,17 @@ PUBLICAR_VIDEO_URL = os.getenv("PUBLICAR_VIDEO_URL", "").strip()
 VIDEO_PUSH_TOKEN = os.getenv("VIDEO_PUSH_TOKEN", "").strip()
 ANCHO, ALTO = 480, 360
 
+# =========================================================================
+# FASE 6: ESTADOS FORMALES DE INTERACCIÓN RETAIL (MÁQUINA DE ESTADOS FSM)
+# =========================================================================
+ESTADO_EN_PERCHA = "EN_PERCHA"
+ESTADO_POSIBLE_EXTRACCION = "POSIBLE_EXTRACCION"
+ESTADO_PRODUCTO_RETIRADO = "PRODUCTO_RETIRADO"
+ESTADO_PRODUCTO_EN_MANO = "PRODUCTO_EN_MANO"
+ESTADO_POSIBLE_DEVOLUCION = "POSIBLE_DEVOLUCION"
+ESTADO_PRODUCTO_DEVUELTO = "PRODUCTO_DEVUELTO"
+ESTADO_INCIERTO = "INCIERTO"
+
 # Clases de interés retail ampliadas (Personas, Botellas, Frutas, Snacks, Accesorios, Objetos)
 # 0: person, 24: backpack, 26: handbag, 28: suitcase, 39: bottle, 40: wine glass, 41: cup,
 # 42: fork, 43: knife, 44: spoon, 45: bowl, 46: banana, 47: apple, 48: sandwich, 49: orange,
@@ -137,6 +148,8 @@ class CameraService:
         self.tiempos_zona = {}           # {pid: t_zona}
         self.productos_en_mano = {}      # {pid: set(prod_names)}
         self.productos_rastreados = {}   # {prod_id: dict_estado}
+        self.fsm_productos = {}          # {prod_key: {estado, frames_confirm, t_cambio, cliente_id}}
+        self.cooldown_eventos = {}       # {(pid, accion): timestamp}
         self.interacciones_registradas = set()
         self.ultimo_reach_zona = {}      # {pid: {'t': time, 'en_zona': bool}}
         try:
@@ -632,13 +645,29 @@ class CameraService:
                     self._encolar_db("permanencia", round(t_salida, 1))
 
         # =====================================================================
-        # LÓGICA DE DETECCIÓN: PRODUCTO TOMADO / PRODUCTO DEVUELTO
+        # MÁQUINA DE ESTADOS FSM: SEGUIMIENTO ROBUSTO Y CONFIRMACIÓN TEMPORAL
+        # Estados: EN_PERCHA -> POSIBLE_EXTRACCION -> PRODUCTO_RETIRADO ->
+        #          PRODUCTO_EN_MANO -> POSIBLE_DEVOLUCION -> PRODUCTO_DEVUELTO
+        #          (o INCIERTO ante oclusión severa)
         # =====================================================================
         alertas_frame = []
+        clientes_con_evento_frame = set()
 
+        # 1. Análisis de productos específicos detectados por YOLO
         for prod in productos_detectados:
             px1, py1, px2, py2 = prod["box"]
             prod_area = max(1, (px2 - px1) * (py2 - py1))
+            prod_key = f"{prod['nombre']}_{prod['id']}"
+
+            if prod_key not in self.fsm_productos:
+                self.fsm_productos[prod_key] = {
+                    "estado": ESTADO_EN_PERCHA if prod["en_percha"] else ESTADO_INCIERTO,
+                    "cliente_id": None,
+                    "frames_confirm": 0,
+                    "t_cambio": ahora
+                }
+
+            fsm = self.fsm_productos[prod_key]
 
             for pers in personas_detectadas:
                 hx1, hy1, hx2, hy2 = pers["box"]
@@ -650,78 +679,80 @@ class CameraService:
                 inter_x2 = min(px2, hx2)
                 inter_y2 = min(py2, hy2)
 
+                en_contacto = False
                 if inter_x2 > inter_x1 and inter_y2 > inter_y1:
                     inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
-                    overlap_ratio = inter_area / float(prod_area)
+                    en_contacto = (inter_area / float(prod_area)) >= 0.18
 
-                    # Intersección significativa (cliente en contacto con el producto)
-                    if overlap_ratio >= 0.20:
-                        clave_inter = (pid, prod["id"])
-                        prod_key = f"{prod['nombre']}_{prod['id']}"
+                # TRANSICIÓN A: POSIBLE EXTRACCIÓN (Contacto inicial en percha)
+                if fsm["estado"] == ESTADO_EN_PERCHA and en_contacto:
+                    fsm["estado"] = ESTADO_POSIBLE_EXTRACCION
+                    fsm["cliente_id"] = pid
+                    fsm["frames_confirm"] = 1
+                    fsm["t_cambio"] = ahora
 
-                        # Inicializar seguimiento del producto si es nuevo
-                        if prod_key not in self.productos_rastreados:
-                            self.productos_rastreados[prod_key] = {
-                                "estado": "en_percha" if prod["en_percha"] else "fuera",
-                                "cliente_id": None,
-                                "t_ultimo_cambio": ahora
-                            }
-
-                        info_prod = self.productos_rastreados[prod_key]
-
-                        # CONDICIÓN 1: PRODUCTO TOMADO (Pick)
-                        # El producto estaba en percha y el cliente interactúa con él
-                        if info_prod["estado"] in ("en_percha", "fuera") and info_prod["cliente_id"] is None:
-                            info_prod["estado"] = "tomado"
-                            info_prod["cliente_id"] = pid
-                            info_prod["t_ultimo_cambio"] = ahora
-                            prod["estado"] = "tomado"
-                            prod["cliente_id"] = pid
-
-                            self.total_agarrados += 1
-                            self.productos_en_mano.setdefault(pid, set()).add(prod["nombre"])
-                            self._encolar_db("tomado", prod["nombre"], pid)
-
-                            coords_norm = [px1, py1, px2 - px1, py2 - py1]
-                            self._registrar_evento_memoria("Producto Tomado", pid, prod["nombre"], prod["conf"], coords_norm, color="naranja")
-                            alertas_frame.append(f"⚡ TOMADO: {prod['nombre']} (C#{pid})")
-
-                        # CONDICIÓN 2: PRODUCTO DEVUELTO (Return)
-                        # El producto estaba en estado 'tomado' y regresa al área estática de la percha
-                        elif info_prod["estado"] == "tomado" and prod["en_percha"]:
-                            # Se confirma la devolución si pasaron más de 1.2 segundos o si la persona se aleja de la percha
-                            if (ahora - info_prod["t_ultimo_cambio"] > 1.2) or (not pers["en_zona"]):
-                                info_prod["estado"] = "devuelto"
-                                cliente_previo = info_prod["cliente_id"] or pid
-                                info_prod["cliente_id"] = None
-                                info_prod["t_ultimo_cambio"] = ahora
-                                prod["estado"] = "devuelto"
-                                prod["cliente_id"] = cliente_previo
-
-                                self.total_devueltos += 1
-                                if cliente_previo in self.productos_en_mano:
-                                    self.productos_en_mano[cliente_previo].discard(prod["nombre"])
-
-                                self._encolar_db("devuelto", prod["nombre"], cliente_previo)
+                elif fsm["estado"] == ESTADO_POSIBLE_EXTRACCION:
+                    if en_contacto:
+                        fsm["frames_confirm"] += 1
+                        # Confirmación temporal: al menos 3 fotogramas continuos y desplazamiento fuera de percha
+                        if fsm["frames_confirm"] >= 3 and not prod["en_percha"]:
+                            cd_key = (pid, "tomado")
+                            if ahora - self.cooldown_eventos.get(cd_key, 0) > 2.5:
+                                self.cooldown_eventos[cd_key] = ahora
+                                fsm["estado"] = ESTADO_PRODUCTO_RETIRADO
+                                fsm["t_cambio"] = ahora
+                                self.total_agarrados += 1
+                                self.productos_en_mano.setdefault(pid, set()).add(prod["nombre"])
+                                self._encolar_db("tomado", prod["nombre"], pid)
 
                                 coords_norm = [px1, py1, px2 - px1, py2 - py1]
-                                self._registrar_evento_memoria("Producto Devuelto", cliente_previo, prod["nombre"], prod["conf"], coords_norm, color="azul")
-                                alertas_frame.append(f"↩ DEVUELTO: {prod['nombre']} (C#{cliente_previo})")
+                                self._registrar_evento_memoria("Producto Tomado", pid, prod["nombre"], prod["conf"], coords_norm, color="naranja")
+                                alertas_frame.append(f"⚡ TOMADO: {prod['nombre']} (C#{pid})")
+                                clientes_con_evento_frame.add(pid)
+                                fsm["estado"] = ESTADO_PRODUCTO_EN_MANO
+                    else:
+                        # Si perdió contacto sin salir de la percha, vuelve a EN_PERCHA (evita falsos positivos por roce)
+                        if prod["en_percha"]:
+                            fsm["estado"] = ESTADO_EN_PERCHA
+                            fsm["frames_confirm"] = 0
 
-        # =====================================================================
-        # DETECTOR DE ACCIÓN RETAIL: ¿AGARRÓ ALGO O SOLO MIRÓ?
-        # Diseñado para cámaras de supermercado reales (CCTV / RTSP / Techo / Pasillo).
-        # Evalúa penetración volumétrica de brazos/torso en la góndola y distingue:
-        # 1. Tránsito rápido (no agarra nada)
-        # 2. Mirar precios/productos sin tocar (fricción visual sin compra)
-        # 3. Agarre de producto (mano penetra 0.6s-5.5s y se retira) -> "Producto Tomado"
-        # 4. Devolución (retorno a la percha) -> "Producto Devuelto"
-        # =====================================================================
+                # TRANSICIÓN B: POSIBLE DEVOLUCIÓN (Reingreso a percha)
+                elif fsm["estado"] == ESTADO_PRODUCTO_EN_MANO and prod["en_percha"]:
+                    if en_contacto:
+                        fsm["estado"] = ESTADO_POSIBLE_DEVOLUCION
+                        fsm["frames_confirm"] = 1
+                        fsm["t_cambio"] = ahora
+
+                elif fsm["estado"] == ESTADO_POSIBLE_DEVOLUCION:
+                    if prod["en_percha"]:
+                        fsm["frames_confirm"] += 1
+                        # Confirmación: reposa en percha y la persona retira el contacto tras >= 0.8s
+                        if fsm["frames_confirm"] >= 3 and (ahora - fsm["t_cambio"] >= 0.8 or not en_contacto):
+                            cd_key = (pid, "devuelto")
+                            if ahora - self.cooldown_eventos.get(cd_key, 0) > 2.5:
+                                self.cooldown_eventos[cd_key] = ahora
+                                fsm["estado"] = ESTADO_PRODUCTO_DEVUELTO
+                                self.total_devueltos += 1
+                                if pid in self.productos_en_mano:
+                                    self.productos_en_mano[pid].discard(prod["nombre"])
+                                self._encolar_db("devuelto", prod["nombre"], pid)
+
+                                coords_norm = [px1, py1, px2 - px1, py2 - py1]
+                                self._registrar_evento_memoria("Producto Devuelto", pid, prod["nombre"], prod["conf"], coords_norm, color="azul")
+                                alertas_frame.append(f"↩ DEVUELTO: {prod['nombre']} (C#{pid})")
+                                clientes_con_evento_frame.add(pid)
+                                fsm["estado"] = ESTADO_EN_PERCHA
+                                fsm["cliente_id"] = None
+                    else:
+                        fsm["estado"] = ESTADO_PRODUCTO_EN_MANO
+
+        # 2. Análisis espacial de percha para cámaras CCTV / Góndola (cuando el producto no tiene clase COCO específica)
         for pers in personas_detectadas:
             pid = pers["id"]
-            hx1, hy1, hx2, hy2 = pers["box"]
+            if pid in clientes_con_evento_frame:
+                continue
 
-            # Cálculo de penetración de la persona dentro de la zona de percha
+            hx1, hy1, hx2, hy2 = pers["box"]
             ix1 = max(hx1, zx1)
             iy1 = max(hy1, zy1)
             ix2 = min(hx2, zx2)
@@ -732,7 +763,6 @@ class CameraService:
                 inter_w = ix2 - ix1
                 inter_h = iy2 - iy1
                 area_pers = max(1, (hx2 - hx1) * (hy2 - hy1))
-                # Contacto activo: penetración física del brazo/cuerpo de al menos 18x24px o 12% del área
                 penetrado = (inter_w >= 18 and inter_h >= 24) or ((inter_w * inter_h) / area_pers >= 0.12)
 
             if pid not in self.ultimo_reach_zona:
@@ -740,50 +770,45 @@ class CameraService:
                     "en_contacto": False,
                     "t_inicio": 0,
                     "tiene_producto": False,
-                    "veces_contacto": 0
+                    "frames_in": 0
                 }
 
             st = self.ultimo_reach_zona[pid]
 
-            # FASE 1: El cliente extiende la mano hacia la góndola
             if penetrado and not st["en_contacto"]:
                 st["en_contacto"] = True
                 st["t_inicio"] = ahora
-
-            # FASE 2: El cliente retira la mano de la góndola
+                st["frames_in"] = 1
+            elif penetrado and st["en_contacto"]:
+                st["frames_in"] += 1
             elif not penetrado and st["en_contacto"]:
                 duracion_gesto = ahora - st["t_inicio"]
                 st["en_contacto"] = False
 
-                # Filtro de precisión retail:
-                # - Tránsito accidental o paso rápido (< 0.6s): NO es compra (se ignora)
-                # - Gesto humano de toma o retorno: entre 0.6s y 5.5s
-                if 0.6 <= duracion_gesto <= 5.5:
-                    st["veces_contacto"] += 1
-
-                    # Si el cliente NO tenía producto -> CONFIRMADO: PRODUCTO TOMADO
+                # Filtro temporal estricto: el gesto debe durar entre 0.6s y 4.5s con al menos 3 frames confirmados
+                if 0.6 <= duracion_gesto <= 4.5 and st["frames_in"] >= 3:
                     if not st["tiene_producto"]:
-                        st["tiene_producto"] = True
-                        self.total_agarrados += 1
-                        self._encolar_db("tomado", "Artículo en Góndola", pid)
+                        cd_key = (pid, "tomado")
+                        if ahora - self.cooldown_eventos.get(cd_key, 0) > 2.5:
+                            self.cooldown_eventos[cd_key] = ahora
+                            st["tiene_producto"] = True
+                            self.total_agarrados += 1
+                            self._encolar_db("tomado", "Artículo en Góndola", pid)
 
-                        coords_gesto = [ix1, iy1, max(50, ix2 - ix1), max(50, iy2 - iy1)]
-                        self._registrar_evento_memoria(
-                            "Producto Tomado", pid, "Artículo en Góndola", 0.94, coords_gesto, color="naranja"
-                        )
-                        alertas_frame.append(f"⚡ TOMADO: Góndola (C#{pid} • {duracion_gesto:.1f}s)")
-
-                    # Si el cliente YA tenía producto y vuelve a colocar las manos en la percha -> DEVUELTO
+                            coords_gesto = [ix1, iy1, max(50, ix2 - ix1), max(50, iy2 - iy1)]
+                            self._registrar_evento_memoria("Producto Tomado", pid, "Artículo en Góndola", 0.94, coords_gesto, color="naranja")
+                            alertas_frame.append(f"⚡ TOMADO: Góndola (C#{pid} • {duracion_gesto:.1f}s)")
                     else:
-                        st["tiene_producto"] = False
-                        self.total_devueltos += 1
-                        self._encolar_db("devuelto", "Artículo en Góndola", pid)
+                        cd_key = (pid, "devuelto")
+                        if ahora - self.cooldown_eventos.get(cd_key, 0) > 2.5:
+                            self.cooldown_eventos[cd_key] = ahora
+                            st["tiene_producto"] = False
+                            self.total_devueltos += 1
+                            self._encolar_db("devuelto", "Artículo en Góndola", pid)
 
-                        coords_gesto = [ix1, iy1, max(50, ix2 - ix1), max(50, iy2 - iy1)]
-                        self._registrar_evento_memoria(
-                            "Producto Devuelto", pid, "Artículo en Góndola", 0.95, coords_gesto, color="azul"
-                        )
-                        alertas_frame.append(f"↩ DEVUELTO: Góndola (C#{pid} • {duracion_gesto:.1f}s)")
+                            coords_gesto = [ix1, iy1, max(50, ix2 - ix1), max(50, iy2 - iy1)]
+                            self._registrar_evento_memoria("Producto Devuelto", pid, "Artículo en Góndola", 0.95, coords_gesto, color="azul")
+                            alertas_frame.append(f"↩ DEVUELTO: Góndola (C#{pid} • {duracion_gesto:.1f}s)")
 
         # Actualizar la estructura atómica del Overlay para el renderizador a 30 FPS
         with self.lock:

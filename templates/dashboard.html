@@ -1158,13 +1158,16 @@
                         </button>
                     </div>
                     <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-[10px]">
-                        <button type="button" class="bg-slate-100 hover:bg-slate-200 text-kovaq-navy px-2 py-0.5 rounded whitespace-nowrap font-medium" onclick="preguntarIARapido('Recomendar pauta para tarde')">
+                        <button type="button" class="bg-slate-100 hover:bg-slate-200 text-kovaq-navy px-2.5 py-1 rounded-lg whitespace-nowrap font-medium border border-kovaq-border flex items-center gap-1" onclick="preguntarIARapido('¿Qué productos están con menor rotación?')">
+                            📉 Menor Rotación
+                        </button>
+                        <button type="button" class="bg-slate-100 hover:bg-slate-200 text-kovaq-navy px-2.5 py-1 rounded-lg whitespace-nowrap font-medium border border-kovaq-border flex items-center gap-1" onclick="preguntarIARapido('Dame la estrategia para detergente líquido')">
+                            🧼 Estrategia Detergente
+                        </button>
+                        <button type="button" class="bg-slate-100 hover:bg-slate-200 text-kovaq-navy px-2.5 py-1 rounded-lg whitespace-nowrap font-medium border border-kovaq-border flex items-center gap-1" onclick="preguntarIARapido('Recomendar pauta para tarde')">
                             ☀️ Pauta Tarde
                         </button>
-                        <button type="button" class="bg-slate-100 hover:bg-slate-200 text-kovaq-navy px-2 py-0.5 rounded whitespace-nowrap font-medium" onclick="preguntarIARapido('¿Qué producto tiene baja conversión?')">
-                            ⚠️ Baja Conversión
-                        </button>
-                        <button type="button" class="bg-slate-100 hover:bg-slate-200 text-kovaq-navy px-2 py-0.5 rounded whitespace-nowrap font-medium" onclick="preguntarIARapido('Crear combo promocional')">
+                        <button type="button" class="bg-slate-100 hover:bg-slate-200 text-kovaq-navy px-2.5 py-1 rounded-lg whitespace-nowrap font-medium border border-kovaq-border flex items-center gap-1" onclick="preguntarIARapido('Crear combo promocional para productos de baja venta')">
                             🛒 Combo Promocional
                         </button>
                     </div>
@@ -1206,7 +1209,7 @@
                     </div>
                     <div>
                         <label class="block font-bold text-kovaq-navy mb-1 uppercase tracking-wider text-[10px]">URL RTSP o Dispositivo USB</label>
-                        <input type="text" id="cam-url" placeholder="rtsp://admin:pass@192.168.1.50:554/live o 0" required class="w-full bg-slate-50 border border-kovaq-border rounded-xl p-2.5 font-mono text-kovaq-navy focus:bg-white focus:outline-none">
+                        <input type="text" id="cam-url" placeholder="rtsp://servidor-cctv:554/stream o USB 0" required class="w-full bg-slate-50 border border-kovaq-border rounded-xl p-2.5 font-mono text-kovaq-navy focus:bg-white focus:outline-none">
                     </div>
                     <div>
                         <label class="block font-bold text-kovaq-navy mb-1 uppercase tracking-wider text-[10px]">Estado Inicial</label>
@@ -1248,7 +1251,7 @@
                             </tr>
                             <tr>
                                 <td class="p-2.5 font-bold">Góndola 2 • Pasillo Refrigerados</td>
-                                <td class="p-2.5 font-mono text-kovaq-slate">rtsp://192.168.1.120:554</td>
+                                <td class="p-2.5 font-mono text-kovaq-slate">rtsp://***@192.168.1.120:554</td>
                                 <td class="p-2.5"><span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold">Activa</span></td>
                                 <td class="p-2.5 text-right">
                                     <button class="text-slate-400 hover:text-red-600 transition-colors" onclick="eliminarFila(this)"><i class="bi bi-trash"></i></button>
@@ -1284,7 +1287,7 @@ function cambiarModulo(moduloId, btn) {
     moduloActivo = moduloId;
 
     if (moduloId === 'tab-percha') {
-        setTimeout(cargarHeatmaps, 100);
+        cargarHeatmaps(false);
     }
 }
 
@@ -1352,12 +1355,23 @@ async function sincronizarTelemetriaBackend() {
                         `;
                         logBody.insertBefore(tr, logBody.firstChild);
 
+                        // Poda activa de DOM para prevenir fugas de memoria
+                        while (logBody.children.length > 40) {
+                            logBody.removeChild(logBody.lastChild);
+                        }
+
                         totalEventosAuditados++;
                         const badgeCounter = document.getElementById('event-log-counter');
                         if (badgeCounter) badgeCounter.innerText = `${totalEventosAuditados} Eventos Registrados`;
                     }
                 }
             });
+
+            // Poda del Set de IDs de eventos en memoria
+            if (ultimosEventosVistos.size > 80) {
+                const arr = Array.from(ultimosEventosVistos);
+                ultimosEventosVistos = new Set(arr.slice(-40));
+            }
         }
 
         // 3. Sincronizar contadores en vivo en Módulo 1 (Vista en Vivo)
@@ -1526,6 +1540,11 @@ async function subirArchivoLocal() {
 
 
 
+function enmascararRTSP(url) {
+    if (!url) return "";
+    return url.replace(/:\/\/([^:]+):([^@]+)@/, "://$1:***@");
+}
+
 function agregarCamara(e) {
     e.preventDefault();
     const nombre = document.getElementById("cam-nombre").value;
@@ -1533,16 +1552,20 @@ function agregarCamara(e) {
     const estado = document.getElementById("cam-estado").value;
     const tbody = document.getElementById("tabla-camaras-body");
     const badgeClass = estado === "Activa" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-800";
+    const urlMostrada = enmascararRTSP(url);
 
     const nuevaFila = document.createElement("tr");
     nuevaFila.innerHTML = `
-        <td class="p-2.5 font-bold text-kovaq-navy">${nombre}</td>
-        <td class="p-2.5 font-mono text-kovaq-slate">${url}</td>
-        <td class="p-2.5"><span class="${badgeClass} text-[10px] px-2 py-0.5 rounded font-bold">${estado}</span></td>
+        <td class="p-2.5 font-bold text-kovaq-navy"></td>
+        <td class="p-2.5 font-mono text-kovaq-slate"></td>
+        <td class="p-2.5"><span class="${badgeClass} text-[10px] px-2 py-0.5 rounded font-bold"></span></td>
         <td class="p-2.5 text-right">
             <button class="text-slate-400 hover:text-red-600 transition-colors" onclick="eliminarFila(this)"><i class="bi bi-trash"></i></button>
         </td>
     `;
+    nuevaFila.children[0].textContent = nombre;
+    nuevaFila.children[1].textContent = urlMostrada;
+    nuevaFila.children[2].firstElementChild.textContent = estado;
     tbody.appendChild(nuevaFila);
     e.target.reset();
 }
@@ -1554,7 +1577,7 @@ function eliminarFila(btn) {
 }
 
 // =========================================================================
-// SINCRONIZACIÓN DE KPIs GLOBALES Y RECOMENDACIONES DE ADS
+// SINCRONIZACIÓN DE KPIs GLOBALES Y RECOMENDACIONES DE ADS (Lógica Centralizada en Backend)
 // =========================================================================
 async function actualizarDatosDashboard() {
     try {
@@ -1564,8 +1587,9 @@ async function actualizarDatosDashboard() {
 
         const trafico = s.trafico || 0;
         const interacciones = s.interacciones || 0;
-        const perm = (s.permanencia_promedio_seg || 0);
-        const tasa = trafico > 0 ? ((interacciones / trafico) * 100).toFixed(1) : "0.0";
+        const perm = s.permanencia_promedio_seg || 0;
+        const tasaFormateada = s.tasa_conversion_formateada || "0.0%";
+        const tasaNum = s.tasa_conversion || 0;
 
         // 1. Sincronizar KPIs en Módulo 1 (Vista en Vivo)
         const liveTrafico = document.getElementById("stat-live-trafico");
@@ -1577,8 +1601,8 @@ async function actualizarDatosDashboard() {
         if (liveTrafico) liveTrafico.innerText = trafico;
         if (livePerm) livePerm.innerText = perm + " s";
         if (liveInter) liveInter.innerText = interacciones;
-        if (liveConv) liveConv.innerText = tasa + "%";
-        if (liveProg) liveProg.style.width = Math.min(parseFloat(tasa), 100) + "%";
+        if (liveConv) liveConv.innerText = tasaFormateada;
+        if (liveProg) liveProg.style.width = Math.min(tasaNum, 100) + "%";
 
         // 2. Sincronizar KPIs en Módulo 2 (Analítica de Percha)
         const elTrafico = document.getElementById("stat-trafico");
@@ -1589,72 +1613,45 @@ async function actualizarDatosDashboard() {
         if (elTrafico) elTrafico.innerText = trafico;
         if (elPerm) elPerm.innerText = perm + " s";
         if (elInter) elInter.innerText = interacciones;
-        if (elConv) elConv.innerText = tasa + "%";
+        if (elConv) elConv.innerText = tasaFormateada;
 
-        // Métricas de Tomas y Devoluciones en Módulo 2
+        // Métricas de Tomas y Devoluciones en Módulo 2 (Cálculo entregado por el servidor)
         const elPerchaTomados = document.getElementById("stat-percha-tomados");
         const elPerchaDevueltos = document.getElementById("stat-percha-devueltos");
         const elPerchaRetorno = document.getElementById("stat-percha-tasa-retorno");
 
         if (elPerchaTomados && s.tomados !== undefined) elPerchaTomados.innerText = s.tomados;
         if (elPerchaDevueltos && s.devueltos !== undefined) elPerchaDevueltos.innerText = s.devueltos;
-        if (elPerchaRetorno && s.tomados !== undefined && s.devueltos !== undefined) {
-            if (s.tomados > 0) {
-                const ret = Math.max(0, Math.round(((s.tomados - s.devueltos) / s.tomados) * 100));
-                elPerchaRetorno.innerText = ret + "%";
-            } else {
-                elPerchaRetorno.innerText = "100%";
-            }
+        if (elPerchaRetorno && s.tasa_retorno_formateada !== undefined) {
+            elPerchaRetorno.innerText = s.tasa_retorno_formateada;
         }
 
-        // 3. Catálogo de Recomendaciones en Módulo 4 (Marketing)
+        // 3. Catálogo de Recomendaciones en Módulo 4 (Marketing) - Datos calculados en Backend
         if (s.top_productos && s.top_productos.length > 0) {
             const tablaCat = document.getElementById("tabla-catalogo-body");
             if (tablaCat) {
                 tablaCat.innerHTML = "";
                 s.top_productos.forEach(p => {
-                    let traficoProd = trafico > p.veces ? trafico : p.veces + 10;
-                    let convProd = ((p.veces / traficoProd) * 100).toFixed(1);
-                    
-                    let badgeCls = "bg-emerald-100 text-emerald-800 font-bold";
-                    let recomendacion = "Rendimiento positivo. Redirigir pauta hacia SKUs secundarios.";
-
-                    if (convProd < 10) {
-                        badgeCls = "bg-orange-100 text-kovaq-orange font-bold";
-                        recomendacion = `Baja evacuación. Lanzar Reels geolocalizados para ${p.producto}.`;
-                    } else if (convProd < 20) {
-                        badgeCls = "bg-amber-100 text-amber-900 font-bold";
-                        recomendacion = `Duda de compra. Ofrecer cupón digital para ${p.producto}.`;
-                    }
-
                     tablaCat.innerHTML += `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="p-2.5 font-bold text-kovaq-navy">${p.producto}</td>
-                        <td class="p-2.5 font-mono-num text-kovaq-slate">${traficoProd}</td>
+                        <td class="p-2.5 font-mono-num text-kovaq-slate">${p.trafico_estimado}</td>
                         <td class="p-2.5 font-mono-num font-bold text-kovaq-navy">${p.veces}</td>
-                        <td class="p-2.5"><span class="${badgeCls} px-2 py-0.5 rounded text-[11px] font-mono-num">${convProd}%</span></td>
-                        <td class="p-2.5 text-xs text-kovaq-slate">${recomendacion}</td>
+                        <td class="p-2.5"><span class="${p.badge_class} px-2 py-0.5 rounded text-[11px] font-mono-num">${p.conversion_porcentaje}%</span></td>
+                        <td class="p-2.5 text-xs text-kovaq-slate">${p.recomendacion}</td>
                     </tr>`;
                 });
             }
         }
 
-        // 4. Diagnóstico IA
-        if (s.resumen) {
-            const elRes = document.getElementById("texto-resumen-ia");
-            const elFric = document.getElementById("texto-friccion");
-            const elRet = document.getElementById("texto-retargeting");
+        // 4. Diagnóstico IA provisto directamente por el Servidor
+        const elRes = document.getElementById("texto-resumen-ia");
+        const elFric = document.getElementById("texto-friccion");
+        const elRet = document.getElementById("texto-retargeting");
 
-            if (elRes) elRes.innerText = s.resumen;
-            if (elFric) elFric.innerText = `Evaluados ${trafico} tránsitos en góndola. Tasa de conversión general calculada en ${tasa}%.`;
-            if (elRet) {
-                if (parseFloat(tasa) < 12 && trafico > 10) {
-                    elRet.innerHTML = `<strong class="text-kovaq-orange">Oportunidad Pauta:</strong> Alto tráfico pero baja toma de producto. Ideal para campaña publicitaria de choque inmediata.`;
-                } else {
-                    elRet.innerText = "Rendimiento orgánico favorable en percha. Mantener rotación habitual.";
-                }
-            }
-        }
+        if (s.resumen && elRes) elRes.innerText = s.resumen;
+        if (s.diagnostico_friccion && elFric) elFric.innerText = s.diagnostico_friccion;
+        if (s.oportunidad_pauta_html && elRet) elRet.innerHTML = s.oportunidad_pauta_html;
     } catch (e) {
         console.error("Error sincronizando dashboard:", e);
     }
@@ -1665,6 +1662,61 @@ actualizarDatosDashboard();
 // =========================================================================
 // CHATBOT ASISTENTE IA (GROQ LLAMA 3.3)
 // =========================================================================
+function formatMarkdownChat(texto) {
+    if (!texto) return "";
+    let clean = texto
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    // Formatear Tablas Markdown
+    clean = clean.replace(/((?:\|[^\n]+\|\r?\n)+)/g, function(match) {
+        const rows = match.trim().split(/\r?\n/).filter(r => r.includes('|'));
+        if (rows.length < 2) return match;
+        
+        let html = '<div class="overflow-x-auto my-2.5"><table class="w-full text-left text-[11px] border border-slate-200 rounded-lg overflow-hidden">';
+        let headerParsed = false;
+        
+        rows.forEach((row) => {
+            // Fila de separadores (|---|---|)
+            if (/^\|[\s\-:|]+\|$/.test(row.trim())) {
+                headerParsed = true;
+                return;
+            }
+            const cells = row.split('|').slice(1, -1).map(c => c.trim());
+            if (!headerParsed) {
+                html += '<thead class="bg-slate-100 text-kovaq-navy font-bold"><tr>';
+                cells.forEach(c => html += `<th class="p-2 border-b border-slate-200">${c}</th>`);
+                html += '</tr></thead><tbody class="divide-y divide-slate-100">';
+            } else {
+                html += '<tr class="hover:bg-slate-50">';
+                cells.forEach(c => html += `<td class="p-2 text-kovaq-navy">${c}</td>`);
+                html += '</tr>';
+            }
+        });
+        html += '</tbody></table></div>';
+        return html;
+    });
+
+    // Encabezados Markdown
+    clean = clean.replace(/^### (.*$)/gim, '<h4 class="font-bold text-kovaq-navy text-xs mt-2.5 mb-1">$1</h4>');
+    clean = clean.replace(/^## (.*$)/gim, '<h3 class="font-bold text-kovaq-navy text-sm mt-3 mb-1.5 pb-0.5 border-b border-slate-200">$1</h3>');
+    clean = clean.replace(/^# (.*$)/gim, '<h2 class="font-bold text-kovaq-navy text-base mt-3 mb-2">$1</h2>');
+
+    // Negrita y Cursiva
+    clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong class="text-kovaq-navy font-bold">$1</strong>');
+    clean = clean.replace(/\*(.*?)\*/g, '<em class="text-slate-600">$1</em>');
+
+    // Elementos de lista
+    clean = clean.replace(/^[•\-\*] (.*$)/gim, '<li class="ml-3 list-disc text-kovaq-navy my-0.5">$1</li>');
+
+    // Saltos de línea y formateo de párrafo
+    clean = clean.replace(/\n/g, '<br>');
+    clean = clean.replace(/<\/table><\/div><br>/g, '</table></div>');
+    clean = clean.replace(/<\/h[234]><br>/g, (m) => m.replace('<br>', ''));
+    return clean;
+}
+
 function agregarBurbuja(contenedor, autor, texto, tipo) {
     const div = document.createElement("div");
     const esUsuario = tipo === "user";
@@ -1675,9 +1727,13 @@ function agregarBurbuja(contenedor, autor, texto, tipo) {
     autorEl.className = "font-title block mb-1 text-[11px] " + (esUsuario ? "text-orange-300" : "text-kovaq-orange");
     autorEl.textContent = autor;
     
-    const textoEl = document.createElement("span");
-    textoEl.className = "texto whitespace-pre-wrap leading-relaxed";
-    textoEl.textContent = texto;
+    const textoEl = document.createElement("div");
+    textoEl.className = "texto leading-relaxed text-xs";
+    if (esUsuario) {
+        textoEl.textContent = texto;
+    } else {
+        textoEl.innerHTML = formatMarkdownChat(texto);
+    }
 
     div.append(autorEl, textoEl);
     contenedor.appendChild(div);
@@ -1686,10 +1742,11 @@ function agregarBurbuja(contenedor, autor, texto, tipo) {
 }
 
 async function preguntarIA(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const input = document.getElementById("chat-input");
     const btn = document.getElementById("chat-submit");
-    const modo = document.getElementById("chat-modo").value;
+    const modoSelect = document.getElementById("chat-modo");
+    const modo = modoSelect ? modoSelect.value : "datos";
     const chatMsgs = document.getElementById("chat-messages");
     
     const msg = input.value.trim();
@@ -1699,21 +1756,40 @@ async function preguntarIA(e) {
     input.value = "";
     btn.disabled = true;
     
-    const burbujaIA = agregarBurbuja(chatMsgs, "Kovaq IA", "Analizando el comportamiento in-store para recomendarte la mejor estrategia...", "bot");
+    const burbujaIA = agregarBurbuja(chatMsgs, "Kovaq IA", "Analizando el comportamiento in-store y generando la mejor estrategia...", "bot");
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
 
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s de salvaguarda máxima en cliente
+
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["X-CSRF-Token"] = token;
+
         const res = await fetch("/api/chat", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mensaje: msg, modo: modo })
+            headers: headers,
+            body: JSON.stringify({ mensaje: msg, modo: modo }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
+
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.detail || "Error en el servidor");
         
-        burbujaIA.querySelector(".texto").textContent = data.respuesta || "Sin respuesta.";
+        const textoEl = burbujaIA.querySelector(".texto");
+        if (textoEl) {
+            textoEl.innerHTML = formatMarkdownChat(data.respuesta || "Sin respuesta disponible en este momento.");
+        }
     } catch (err) {
-        burbujaIA.className = "p-3 rounded-xl text-xs bg-red-50 text-red-900 border border-red-300 mr-auto";
-        burbujaIA.querySelector(".texto").textContent = "Error de conexión: " + err.message;
+        const textoEl = burbujaIA.querySelector(".texto");
+        if (textoEl) {
+            const mensajeError = err.name === 'AbortError' 
+                ? 'Tiempo de espera agotado. Reintentando con estrategia local...' 
+                : err.message;
+            textoEl.innerHTML = `<span class="text-amber-800 font-medium">⚠️ ${mensajeError}</span>`;
+        }
     } finally {
         btn.disabled = false;
         input.focus();
@@ -1760,9 +1836,18 @@ function cambiarVistaMatriz(modo) {
     }
 }
 
-async function cargarHeatmaps() {
+let cacheHeatmapsTimestamp = 0;
+
+async function cargarHeatmaps(forzar = false) {
     const sel = document.getElementById("select-heatmap-dias");
     const dias = sel ? sel.value : 30;
+    const ahora = Date.now();
+
+    // Caché inteligente en cliente: evita recargas y parpadeos si se consultó hace menos de 45 segundos
+    if (!forzar && datosMatrizGlobal && (ahora - cacheHeatmapsTimestamp < 45000)) {
+        return;
+    }
+
     try {
         const [resHora, resMatriz, resFranjas] = await Promise.all([
             fetch(`/api/analytics/heatmap/hora?dias=${dias}`),
@@ -1778,6 +1863,7 @@ async function cargarHeatmaps() {
         if (resMatriz.ok) {
             const dm = await resMatriz.json();
             datosMatrizGlobal = dm;
+            cacheHeatmapsTimestamp = ahora;
             actualizarInsightsMatriz(dm);
             renderizarMatrizSegunModo(dm);
         }
@@ -1814,13 +1900,8 @@ function actualizarInsightsMatriz(dm) {
         totalSemanalEl.innerText = `${dm.total_semanal} personas`;
     }
 
-    if (patronEl && dm.hora_pico) {
-        const h = parseInt(dm.hora_pico.hora.split(':')[0]) || 0;
-        let franjaTxt = "Tarde (14h - 18h)";
-        if (h >= 18) franjaTxt = "Noche (18h - 23h)";
-        else if (h >= 11) franjaTxt = "Mediodía (11h - 14h)";
-        else if (h >= 6) franjaTxt = "Mañana (06h - 11h)";
-        patronEl.innerText = `Pico en ${franjaTxt}`;
+    if (patronEl) {
+        patronEl.innerText = dm.patron_pico || "Horario comercial regular";
     }
 }
 

@@ -96,6 +96,25 @@ async def heatmap_matriz(request: Request, dias: int = Query(30, ge=1, le=90)):
         "total": max_hora_val if max_hora_val >= 0 else 0
     }
 
+    # Determinación de patrón comercial en el servidor
+    try:
+        h_val = int(hora_pico["hora"].split(":")[0])
+    except Exception:
+        h_val = 20
+
+    if h_val >= 18:
+        franja_txt = "Noche (18h - 23h)"
+    elif h_val >= 14:
+        franja_txt = "Tarde (14h - 18h)"
+    elif h_val >= 11:
+        franja_txt = "Mediodía (11h - 14h)"
+    elif h_val >= 6:
+        franja_txt = "Mañana (06h - 11h)"
+    else:
+        franja_txt = "Madrugada (23h - 06h)"
+
+    patron_pico = f"Pico en {franja_txt}"
+
     return {
         "dias": nombres_dias,
         "horas": [f"{h:02d}:00" for h in range(24)],
@@ -103,6 +122,7 @@ async def heatmap_matriz(request: Request, dias: int = Query(30, ge=1, le=90)):
         "total_semanal": total_semanal,
         "dia_pico": dia_pico,
         "hora_pico": hora_pico,
+        "patron_pico": patron_pico,
         "resumen_franjas": resumen_franjas
     }
 
@@ -212,7 +232,7 @@ async def tendencia(request: Request, dias: int = Query(14, ge=1, le=90)):
 @router.get("/publicidad")
 async def publicidad(
     request: Request,
-    franja: str = Query(None, regex="^(manana|tarde|noche)$"),
+    franja: str = Query(None, pattern="^(manana|tarde|noche)$"),
     dias: int = Query(7, ge=1, le=90),
 ):
     """Datos cruzados + sugerencias automáticas de pauta por franja horaria."""
